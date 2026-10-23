@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { GenerateRequest } from './api.ts'
 import { DRAFT_CATEGORIES, type Draft, type GeneratedDraft } from './draft.ts'
 
 // Shared by the client and the Netlify Functions. Keep this file free of DOM and Node APIs.
@@ -11,6 +12,10 @@ export const generatedDraftSchema = z.object({
   subject: z.string().max(300),
   body: z.string().min(1).max(MAX_TRANSCRIPT_LENGTH),
 }) satisfies z.ZodType<GeneratedDraft>
+
+export const generateRequestSchema = z.object({
+  transcript: z.string().trim().min(1).max(MAX_TRANSCRIPT_LENGTH),
+}) satisfies z.ZodType<GenerateRequest>
 
 export const draftSchema = generatedDraftSchema.extend({
   id: z.uuid(),
