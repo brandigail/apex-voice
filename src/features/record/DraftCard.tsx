@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, Copy, Mail, MessageSquare } from 'lucide-react'
-import { buildMailtoUrl, buildSmsUrl, draftToText } from '../../lib/share'
+import { EMAIL_PROVIDERS, buildEmailUrl, buildSmsUrl, draftToText, type EmailProvider } from '../../lib/share'
 import { DRAFT_CATEGORIES, type DraftCategory, type GeneratedDraft } from '../../types/draft'
+import { useEmailProvider } from './useEmailProvider'
 import type { VoiceNoteResult } from './useVoiceNote'
 
 interface DraftCardProps {
@@ -27,6 +28,8 @@ export function DraftCard({ result, onChange }: DraftCardProps) {
   const { draft, transcript } = result
   const [copyState, setCopyState] = useState<CopyState>('idle')
   const resetTimer = useRef<number | null>(null)
+  const [emailProvider, setEmailProvider] = useEmailProvider()
+  const providerLabel = EMAIL_PROVIDERS.find((p) => p.id === emailProvider)?.label ?? 'mail'
 
   useEffect(
     () => () => {
@@ -120,6 +123,26 @@ export function DraftCard({ result, onChange }: DraftCardProps) {
           />
         </div>
 
+        {sendsAsMail && (
+          <div>
+            <label htmlFor="draft-mail-app" className="mb-1 block text-sm font-medium">
+              Email app
+            </label>
+            <select
+              id="draft-mail-app"
+              value={emailProvider}
+              onChange={(e) => setEmailProvider(e.target.value as EmailProvider)}
+              className={fieldClass}
+            >
+              {EMAIL_PROVIDERS.map((provider) => (
+                <option key={provider.id} value={provider.id}>
+                  {provider.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -133,12 +156,14 @@ export function DraftCard({ result, onChange }: DraftCardProps) {
 
           {sendsAsMail && (
             <a
-              href={canSend ? buildMailtoUrl(draft) : undefined}
+              href={canSend ? buildEmailUrl(emailProvider, draft) : undefined}
+              target={emailProvider === 'default' ? undefined : '_blank'}
+              rel="noopener noreferrer"
               aria-disabled={!canSend}
               className={`${actionClass} bg-indigo-600 text-white hover:bg-indigo-700 aria-disabled:opacity-60`}
             >
               <Mail className="size-4" aria-hidden="true" />
-              Open in mail
+              Open in {providerLabel}
             </a>
           )}
           {sendsAsSms && (

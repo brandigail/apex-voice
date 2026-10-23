@@ -8,10 +8,30 @@ function encodeBody(text: string): string {
   return encodeURIComponent(text.replace(/\r?\n/g, '\r\n'))
 }
 
-/** The To address is only filled in when the recipient is actually an email address, not a spoken name. */
-export function buildMailtoUrl(draft: GeneratedDraft): string {
-  const to = EMAIL_PATTERN.test(draft.recipient.trim()) ? draft.recipient.trim() : ''
-  return `mailto:${to}?subject=${encodeURIComponent(draft.subject)}&body=${encodeBody(draft.body)}`
+export type EmailProvider = 'default' | 'gmail' | 'outlook' | 'yahoo'
+
+export const EMAIL_PROVIDERS: readonly { id: EmailProvider; label: string }[] = [
+  { id: 'default', label: 'Default mail app' },
+  { id: 'gmail', label: 'Gmail' },
+  { id: 'outlook', label: 'Outlook' },
+  { id: 'yahoo', label: 'Yahoo Mail' },
+]
+
+/** Builds a compose link for the chosen mail app. The To address is only filled in when the recipient is an email address, not a spoken name. */
+export function buildEmailUrl(provider: EmailProvider, draft: GeneratedDraft): string {
+  const to = encodeURIComponent(EMAIL_PATTERN.test(draft.recipient.trim()) ? draft.recipient.trim() : '')
+  const subject = encodeURIComponent(draft.subject)
+  const body = encodeBody(draft.body)
+  switch (provider) {
+    case 'gmail':
+      return `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`
+    case 'outlook':
+      return `https://outlook.office.com/mail/deeplink/compose?to=${to}&subject=${subject}&body=${body}`
+    case 'yahoo':
+      return `https://compose.mail.yahoo.com/?to=${to}&subject=${subject}&body=${body}`
+    case 'default':
+      return `mailto:${to.replace('%40', '@')}?subject=${subject}&body=${body}`
+  }
 }
 
 /** `?&body=` works on both iOS and Android. */
