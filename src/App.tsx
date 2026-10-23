@@ -1,8 +1,15 @@
+import { useState } from 'react'
+import { AppShell } from './components/AppShell'
+import type { Tab } from './components/TabBar'
+import { HistoryView } from './features/history/HistoryView'
+import { RecordView } from './features/record/RecordView'
+
 export default function App() {
+  const [tab, setTab] = useState<Tab>('record')
+
   return (
-    <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center gap-2 p-6 text-center">
-      <h1 className="text-3xl font-bold">Apex Voice</h1>
-      <p className="text-slate-600">Voice notes to ready-to-send drafts.</p>
-    </main>
+    <AppShell activeTab={tab} onTabChange={setTab}>
+      {tab === 'record' ? <RecordView /> : <HistoryView />}
+    </AppShell>
   )
 }
