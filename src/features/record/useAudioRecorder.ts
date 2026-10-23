@@ -33,7 +33,8 @@ export interface UseAudioRecorder {
   reset: () => void
 }
 
-export function useAudioRecorder(): UseAudioRecorder {
+/** `onRecorded` fires once with the complete clip, whether the user stopped it or the 60 s cap did. */
+export function useAudioRecorder(onRecorded?: (recording: RecordedAudio) => void): UseAudioRecorder {
   const [status, setStatus] = useState<RecorderStatus>('idle')
   const [elapsedMs, setElapsedMs] = useState(0)
   const [error, setError] = useState<RecorderError | null>(null)
@@ -46,6 +47,11 @@ export function useAudioRecorder(): UseAudioRecorder {
   const startedAtRef = useRef(0)
   /** True from a start() call until the mic is acquired; cleared by teardown to cancel a pending start. */
   const startingRef = useRef(false)
+  const onRecordedRef = useRef(onRecorded)
+
+  useEffect(() => {
+    onRecordedRef.current = onRecorded
+  }, [onRecorded])
 
   /** Stops the timer, mic and recorder without firing any state updates. */
   const teardown = useCallback(() => {
@@ -139,8 +145,10 @@ export function useAudioRecorder(): UseAudioRecorder {
         return
       }
       setElapsedMs(durationMs)
-      setRecording({ blob, mimeType, durationMs })
+      const recorded: RecordedAudio = { blob, mimeType, durationMs }
+      setRecording(recorded)
       setStatus('recorded')
+      onRecordedRef.current?.(recorded)
     }
 
     startedAtRef.current = performance.now()
