@@ -5,7 +5,7 @@
 - [x] 3. Neon schema (`drafts` table) and a migration script
 - [x] 4. `types/` (Draft, DraftCategory) and a shared zod schema
 - [x] 5. `useAudioRecorder` hook: permission, start/stop, timer, mime detection, 60s cap
-- [ ] 6. `netlify/functions/transcribe.ts` (Groq Whisper) with passcode check and size limits
+- [x] 6. `netlify/functions/transcribe.ts` (Groq Whisper) with passcode check and size limits
 - [ ] 7. `netlify/functions/generate.ts` (Groq LLM, JSON mode, zod validation, one retry on invalid JSON)
 - [ ] 8. Record screen UI: record button, timer, processing states, error handling
 - [ ] 9. Editable draft card with copy, mailto and sms actions

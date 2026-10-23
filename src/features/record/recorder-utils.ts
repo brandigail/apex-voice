@@ -14,16 +14,6 @@ export function pickMimeType(): string | undefined {
   return MIME_CANDIDATES.find((type) => MediaRecorder.isTypeSupported(type))
 }
 
-/** File extension for a recorded mime type, used when uploading so the transcriber can sniff the format. */
-export function extensionForMime(mimeType: string): string {
-  const base = mimeType.split(';')[0].trim().toLowerCase()
-  if (base === 'audio/mp4' || base === 'audio/x-m4a') return 'm4a'
-  if (base === 'audio/ogg') return 'ogg'
-  if (base === 'audio/mpeg') return 'mp3'
-  if (base === 'audio/wav' || base === 'audio/x-wav') return 'wav'
-  return 'webm'
-}
-
 export function toRecorderError(err: unknown): RecorderError {
   const name = err instanceof DOMException ? err.name : ''
   switch (name) {
