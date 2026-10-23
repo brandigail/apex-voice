@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+
+# builds
+.next/
+dist/
+build/
+.netlify/
+.expo/
+coverage/
+*.tsbuildinfo
+
+# env (keep the example only)
+.env*
+!.env.example
+
+# misc
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+.vscode/*
+!.vscode/extensions.json
