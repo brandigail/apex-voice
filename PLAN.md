@@ -1,6 +1,6 @@
 # Apex Voice: Build Plan
 
-- [ ] 1. Scaffold Vite React TS, Tailwind v4 plugin, lucide-react, zod, `.env.example`, `.gitignore`, `netlify.toml`
+- [x] 1. Scaffold Vite React TS, Tailwind v4 plugin, lucide-react, zod, `.env.example`, `.gitignore`, `netlify.toml`
 - [ ] 2. Provider setup in `main.tsx`; layout, theme, mobile-first shell
 - [ ] 3. Neon schema (`drafts` table) and a migration script
 - [ ] 4. `types/` (Draft, DraftCategory) and a shared zod schema
