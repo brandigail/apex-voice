@@ -8,7 +8,7 @@
 - [x] 6. `netlify/functions/transcribe.ts` (Groq Whisper) with passcode check and size limits
 - [x] 7. `netlify/functions/generate.ts` (Groq LLM, JSON mode, zod validation, one retry on invalid JSON)
 - [x] 8. Record screen UI: record button, timer, processing states, error handling
-- [ ] 9. Editable draft card with copy, mailto and sms actions
+- [x] 9. Editable draft card with copy, mailto and sms actions
 - [ ] 10. `netlify/functions/db-sync.ts` (list, upsert, delete) and a client sync layer
 - [ ] 11. Draft history screen with search and category filter
 - [ ] 12. Passcode gate and basic rate limiting

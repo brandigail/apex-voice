@@ -1,5 +1,5 @@
 import { AlertCircle, RotateCcw } from 'lucide-react'
-import { DraftPreview } from './DraftPreview'
+import { DraftCard } from './DraftCard'
 import { RecordButton, type RecordButtonMode } from './RecordButton'
 import { RecordTimer } from './RecordTimer'
 import { MAX_RECORDING_SECONDS, useAudioRecorder } from './useAudioRecorder'
@@ -94,7 +94,7 @@ export function RecordView() {
 
       {note.result && (
         <>
-          <DraftPreview result={note.result} />
+          <DraftCard result={note.result} onChange={note.updateDraft} />
           <button type="button" onClick={startNew} className={secondaryButton}>
             <RotateCcw className="size-4" aria-hidden="true" />
             New recording

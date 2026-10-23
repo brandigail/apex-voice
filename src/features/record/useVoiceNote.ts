@@ -19,6 +19,8 @@ export interface UseVoiceNote {
   run: (recording: RecordedAudio) => Promise<void>
   /** Re-run the failed step for the last clip, reusing the transcript if transcription already succeeded. */
   retry: () => Promise<void>
+  /** Apply the user's edits to the current draft. */
+  updateDraft: (patch: Partial<GeneratedDraft>) => void
   reset: () => void
 }
 
@@ -72,6 +74,10 @@ export function useVoiceNote(): UseVoiceNote {
     if (recordingRef.current) await run(recordingRef.current)
   }, [run])
 
+  const updateDraft = useCallback((patch: Partial<GeneratedDraft>) => {
+    setResult((current) => (current ? { ...current, draft: { ...current.draft, ...patch } } : current))
+  }, [])
+
   const reset = useCallback(() => {
     runIdRef.current++
     recordingRef.current = null
@@ -81,5 +87,5 @@ export function useVoiceNote(): UseVoiceNote {
     setError(null)
   }, [])
 
-  return { stage, result, error, run, retry, reset }
+  return { stage, result, error, run, retry, updateDraft, reset }
 }
