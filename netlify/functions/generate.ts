@@ -1,9 +1,10 @@
 import type { GenerateResponse } from '../../src/types/api.ts'
 import { generateRequestSchema, generatedDraftSchema } from '../../src/types/draft-schema.ts'
 import type { GeneratedDraft } from '../../src/types/draft.ts'
-import { retryPrompt, SYSTEM_PROMPT, userPrompt } from './_lib/draft-prompt.ts'
+import { retryPrompt, systemPrompt, userPrompt } from './_lib/draft-prompt.ts'
 import { errorResponse, json } from './_lib/http.ts'
 import { requireUser } from './_lib/session.ts'
+import { withSignature } from './_lib/signature.ts'
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 const DEFAULT_MODEL = 'qwen/qwen3.8-27b'
@@ -86,9 +87,10 @@ export default async function handler(req: Request): Promise<Response> {
   const request = generateRequestSchema.safeParse(body)
   if (!request.success) return errorResponse(400, 'A transcript of 1 to 10,000 characters is required.')
 
+  const { profile } = session.user
   const startedAt = Date.now()
   const messages: ChatMessage[] = [
-    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'system', content: systemPrompt(profile) },
     { role: 'user', content: userPrompt(request.data.transcript) },
   ]
 
@@ -103,7 +105,7 @@ export default async function handler(req: Request): Promise<Response> {
     }
 
     const parsed = parseDraft(result.content)
-    if (parsed.ok) return json<GenerateResponse>({ draft: parsed.draft })
+    if (parsed.ok) return json<GenerateResponse>({ draft: withSignature(parsed.draft, profile) })
 
     console.error('Invalid draft from model:', parsed.problem)
     messages.push({ role: 'assistant', content: result.content }, { role: 'user', content: retryPrompt(parsed.problem) })

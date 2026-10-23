@@ -12,4 +12,13 @@ export const auth = betterAuth({
     enabled: true,
     minPasswordLength: 8,
   },
+  // Profile fields live on the user row (see db/003_user_profile.sql) and are editable via updateUser.
+  user: {
+    additionalFields: {
+      businessName: { type: 'string', required: false },
+      role: { type: 'string', required: false },
+      phone: { type: 'string', required: false },
+      signature: { type: 'string', required: false },
+    },
+  },
 })

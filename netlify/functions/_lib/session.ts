@@ -1,10 +1,12 @@
+import { profileFromUser } from '../../../src/lib/profile.ts'
+import type { Profile } from '../../../src/types/profile.ts'
 import { auth } from './auth.ts'
 import { errorResponse } from './http.ts'
 
 export interface SessionUser {
   id: string
-  name: string
   email: string
+  profile: Profile
 }
 
 type UserResult = { ok: true; user: SessionUser } | { ok: false; response: Response }
@@ -14,8 +16,8 @@ export async function requireUser(req: Request): Promise<UserResult> {
   try {
     const session = await auth.api.getSession({ headers: req.headers })
     if (session) {
-      const { id, name, email } = session.user
-      return { ok: true, user: { id, name, email } }
+      const { id, email } = session.user
+      return { ok: true, user: { id, email, profile: profileFromUser(session.user) } }
     }
   } catch (err) {
     console.error('Session lookup failed:', err)

@@ -3,6 +3,7 @@ import { AppShell } from './components/AppShell'
 import type { Tab } from './components/TabBar'
 import { AuthScreen } from './features/auth/AuthScreen'
 import { HistoryView } from './features/history/HistoryView'
+import { ProfileView } from './features/profile/ProfileView'
 import { RecordView } from './features/record/RecordView'
 import { authClient } from './lib/auth-client'
 
@@ -20,8 +21,10 @@ export default function App() {
         <AuthScreen />
       ) : tab === 'record' ? (
         <RecordView />
-      ) : (
+      ) : tab === 'history' ? (
         <HistoryView />
+      ) : (
+        <ProfileView user={session.user} />
       )}
     </AppShell>
   )

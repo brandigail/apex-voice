@@ -1,10 +1,11 @@
-import { History, Mic } from 'lucide-react'
+import { History, Mic, UserRound } from 'lucide-react'
 
-export type Tab = 'record' | 'history'
+export type Tab = 'record' | 'history' | 'profile'
 
 const TABS = [
   { id: 'record', label: 'Record', icon: Mic },
   { id: 'history', label: 'History', icon: History },
+  { id: 'profile', label: 'Profile', icon: UserRound },
 ] as const
 
 interface TabBarProps {
