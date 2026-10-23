@@ -1,7 +1,11 @@
-import { AudioWaveform, Moon, Sun } from 'lucide-react'
+import { AudioWaveform, LogOut, Moon, Sun } from 'lucide-react'
+import { authClient } from '../lib/auth-client'
 import { useTheme } from '../providers/useTheme'
 
-export function Header() {
+const iconButton =
+  'inline-flex size-10 items-center justify-center rounded-full hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-indigo-500 dark:hover:bg-slate-800'
+
+export function Header({ signedIn }: { signedIn: boolean }) {
   const { theme, toggleTheme } = useTheme()
   const isDark = theme === 'dark'
 
@@ -12,14 +16,21 @@ export function Header() {
           <AudioWaveform className="size-5 text-indigo-600 dark:text-indigo-400" aria-hidden="true" />
           Apex Voice
         </div>
-        <button
-          type="button"
-          onClick={toggleTheme}
-          aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
-          className="inline-flex size-10 items-center justify-center rounded-full hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-indigo-500 dark:hover:bg-slate-800"
-        >
-          {isDark ? <Sun className="size-5" aria-hidden="true" /> : <Moon className="size-5" aria-hidden="true" />}
-        </button>
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+            className={iconButton}
+          >
+            {isDark ? <Sun className="size-5" aria-hidden="true" /> : <Moon className="size-5" aria-hidden="true" />}
+          </button>
+          {signedIn && (
+            <button type="button" onClick={() => void authClient.signOut()} aria-label="Sign out" className={iconButton}>
+              <LogOut className="size-5" aria-hidden="true" />
+            </button>
+          )}
+        </div>
       </div>
     </header>
   )

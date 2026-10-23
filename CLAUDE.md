@@ -6,7 +6,7 @@ Read the portfolio-root `CLAUDE.md` first for global rules. This file is the bri
 A zero-cost installable PWA. You record a voice note, it is transcribed, then structured into a ready-to-send draft (email, quote, SMS or note) that syncs across devices. The old version is broken; don't reuse its code.
 
 ## Stack
-React, Vite, TypeScript strict, Tailwind CSS v4 (`@tailwindcss/vite`), lucide-react, `vite-plugin-pwa`, `@neondatabase/serverless` (Neon Postgres), Netlify Functions. AI is Groq only (no Gemini).
+React, Vite, TypeScript strict, Tailwind CSS v4 (`@tailwindcss/vite`), lucide-react, `vite-plugin-pwa`, `@neondatabase/serverless` (Neon Postgres), Better Auth, Netlify Functions. AI is Groq only (no Gemini).
 
 ## Serverless backend (`/netlify/functions`)
 - `transcribe.ts`: receives audio, calls Groq Whisper `whisper-large-v3-turbo`, returns text.
@@ -30,7 +30,9 @@ Offline queue (record offline, process when back online), search and filter draf
 ## Rules specific to this project
 - API keys (`GROQ_API_KEY`, `DATABASE_URL`) exist only in Netlify function env, never in the client bundle.
 - MediaRecorder timeslice chunks are NOT independently decodable audio. Record the whole clip and send the complete blob on stop. Cap clips at about 60 seconds so the base64 body stays under Netlify's 6 MB request limit; show the limit in the UI.
-- Access control: a single shared passcode (`APP_PASSCODE` env var) checked by every function, so strangers can't burn the Groq quota. Add simple rate limiting.
+- Access control (changed from the original shared-passcode design): email + password accounts with Better Auth on Neon. Every function requires a valid session cookie. Sign-up is open, so each user gets per-user rate limiting and a daily quota to protect the Groq quota. Drafts are scoped to the signed-in user.
+- Each user has a profile (display name, business name, role, phone, sign-off). `generate` uses it so drafts are written in their name and end with their sign-off.
+- "Send from Apex" (Gmail API or Resend) is Phase 2. For now drafts open in the user's mail app (default, Gmail, Outlook or Yahoo) or SMS.
 - iOS Safari needs a user gesture to start recording and may output mp4 rather than webm; detect the supported mime type.
 - Provide `tailwindcss` v4 setup via the Vite plugin (no `tailwind.config.js` or PostCSS needed).
 

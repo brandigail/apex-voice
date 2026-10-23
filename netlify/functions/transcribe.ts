@@ -1,7 +1,7 @@
 import { extensionForMime } from '../../src/lib/audio-mime.ts'
 import type { TranscribeResponse } from '../../src/types/api.ts'
-import { checkPasscode } from './_lib/auth.ts'
 import { errorResponse, json } from './_lib/http.ts'
+import { requireUser } from './_lib/session.ts'
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/audio/transcriptions'
 const GROQ_MODEL = 'whisper-large-v3-turbo'
@@ -17,8 +17,8 @@ interface GroqTranscription {
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== 'POST') return errorResponse(405, 'Method not allowed.')
 
-  const denied = checkPasscode(req)
-  if (denied) return denied
+  const session = await requireUser(req)
+  if (!session.ok) return session.response
 
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) {

@@ -4,8 +4,6 @@ import { generatedDraftSchema } from '../types/draft-schema'
 import type { GeneratedDraft } from '../types/draft'
 import { extensionForMime } from './audio-mime'
 
-/** Matches PASSCODE_HEADER in netlify/functions/_lib/auth.ts. */
-const PASSCODE_HEADER = 'x-passcode'
 const REQUEST_TIMEOUT_MS = 20_000
 
 export class ApiRequestError extends Error {
@@ -21,13 +19,12 @@ export class ApiRequestError extends Error {
 const transcribeResponseSchema = z.object({ text: z.string().min(1) })
 const generateResponseSchema = z.object({ draft: generatedDraftSchema })
 
-async function send(path: string, passcode: string, init: RequestInit): Promise<unknown> {
+async function send(path: string, init: RequestInit): Promise<unknown> {
   let response: Response
   try {
     response = await fetch(path, {
       ...init,
       method: 'POST',
-      headers: { ...init.headers, [PASSCODE_HEADER]: passcode },
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     })
   } catch (err) {
@@ -53,18 +50,18 @@ async function send(path: string, passcode: string, init: RequestInit): Promise<
   }
 }
 
-export async function transcribeAudio(blob: Blob, mimeType: string, passcode: string): Promise<string> {
+export async function transcribeAudio(blob: Blob, mimeType: string): Promise<string> {
   const form = new FormData()
   form.set('audio', blob, `recording.${extensionForMime(mimeType)}`)
-  const data = transcribeResponseSchema.safeParse(await send('/api/transcribe', passcode, { body: form }))
+  const data = transcribeResponseSchema.safeParse(await send('/api/transcribe', { body: form }))
   if (!data.success) throw new ApiRequestError(502, 'The server sent an unexpected response.')
   return data.data.text
 }
 
-export async function generateDraft(transcript: string, passcode: string): Promise<GeneratedDraft> {
+export async function generateDraft(transcript: string): Promise<GeneratedDraft> {
   const payload: GenerateRequest = { transcript }
   const data = generateResponseSchema.safeParse(
-    await send('/api/generate', passcode, {
+    await send('/api/generate', {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     }),

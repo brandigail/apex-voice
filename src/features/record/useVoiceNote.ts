@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { ApiRequestError, generateDraft, transcribeAudio } from '../../lib/api'
-import { usePasscode } from '../../providers/usePasscode'
+import { authClient } from '../../lib/auth-client'
 import type { GeneratedDraft } from '../../types/draft'
 import type { RecordedAudio } from './useAudioRecorder'
 
@@ -25,7 +25,6 @@ export interface UseVoiceNote {
 }
 
 export function useVoiceNote(): UseVoiceNote {
-  const { passcode, reject } = usePasscode()
   const [stage, setStage] = useState<VoiceNoteStage>('idle')
   const [result, setResult] = useState<VoiceNoteResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -37,7 +36,6 @@ export function useVoiceNote(): UseVoiceNote {
 
   const run = useCallback(
     async (recording: RecordedAudio) => {
-      if (!passcode) return
       const runId = ++runIdRef.current
       const isCurrent = () => runId === runIdRef.current
 
@@ -49,25 +47,26 @@ export function useVoiceNote(): UseVoiceNote {
         let transcript = transcriptRef.current
         if (transcript === null) {
           setStage('transcribing')
-          transcript = await transcribeAudio(recording.blob, recording.mimeType, passcode)
+          transcript = await transcribeAudio(recording.blob, recording.mimeType)
           if (!isCurrent()) return
           transcriptRef.current = transcript
         }
 
         setStage('structuring')
-        const draft = await generateDraft(transcript, passcode)
+        const draft = await generateDraft(transcript)
         if (!isCurrent()) return
 
         setResult({ transcript, draft })
         setStage('done')
       } catch (err) {
         if (!isCurrent()) return
-        if (err instanceof ApiRequestError && err.status === 401) reject()
+        // An expired session: signing out returns the user to the sign-in screen.
+        if (err instanceof ApiRequestError && err.status === 401) void authClient.signOut()
         setError(err instanceof ApiRequestError ? err.message : 'Something went wrong. Please try again.')
         setStage('error')
       }
     },
-    [passcode, reject],
+    [],
   )
 
   const retry = useCallback(async () => {

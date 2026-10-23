@@ -1,9 +1,9 @@
 import type { GenerateResponse } from '../../src/types/api.ts'
 import { generateRequestSchema, generatedDraftSchema } from '../../src/types/draft-schema.ts'
 import type { GeneratedDraft } from '../../src/types/draft.ts'
-import { checkPasscode } from './_lib/auth.ts'
 import { retryPrompt, SYSTEM_PROMPT, userPrompt } from './_lib/draft-prompt.ts'
 import { errorResponse, json } from './_lib/http.ts'
+import { requireUser } from './_lib/session.ts'
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 const DEFAULT_MODEL = 'qwen/qwen3.8-27b'
@@ -68,8 +68,8 @@ function parseDraft(content: string): ParseResult {
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== 'POST') return errorResponse(405, 'Method not allowed.')
 
-  const denied = checkPasscode(req)
-  if (denied) return denied
+  const session = await requireUser(req)
+  if (!session.ok) return session.response
 
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) {

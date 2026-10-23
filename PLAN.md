@@ -8,12 +8,18 @@
 - [x] 6. `netlify/functions/transcribe.ts` (Groq Whisper) with passcode check and size limits
 - [x] 7. `netlify/functions/generate.ts` (Groq LLM, JSON mode, zod validation, one retry on invalid JSON)
 - [x] 8. Record screen UI: record button, timer, processing states, error handling
-- [x] 9. Editable draft card with copy, mailto and sms actions
-- [ ] 10. `netlify/functions/db-sync.ts` (list, upsert, delete) and a client sync layer
-- [ ] 11. Draft history screen with search and category filter
-- [ ] 12. Passcode gate and basic rate limiting
-- [ ] 13. PWA: manifest, icons in `/public`, `vite-plugin-pwa` prompt-for-update banner, offline shell
-- [ ] 14. Test the full flow on desktop Chrome and a real phone (iOS Safari and Android Chrome)
-- [ ] 15. Build, lint and `tsc --noEmit` clean; no console errors
-- [ ] 16. README (pitch, architecture diagram, features, recruiter demo bullets)
-- [ ] 17. Deploy to Netlify with env vars; test live; push to GitHub; update root `LINKS.md`
+- [x] 9. Editable draft card with copy, mailto and sms actions (plus Gmail, Outlook and Yahoo compose links)
+- [x] 10. Accounts: Better Auth (email + password) on Neon; sign up, sign in, sign out UI; functions check the session cookie instead of the shared passcode
+- [ ] 11. Profile and sign-off: display name, business name, role, phone, signature; settings screen; `generate` writes drafts in the user's name and sign-off
+- [ ] 12. Per-user rate limiting and daily quota on `transcribe` and `generate` (sign-up is open, so protect the Groq quota)
+- [ ] 13. `netlify/functions/db-sync.ts` (list, upsert, delete, scoped to the signed-in user) and a client sync layer
+- [ ] 14. Draft history screen with search and category filter
+- [ ] 15. PWA: manifest, icons in `/public`, `vite-plugin-pwa` prompt-for-update banner, offline shell
+- [ ] 16. Test the full flow on desktop Chrome and a real phone (iOS Safari and Android Chrome)
+- [ ] 17. Build, lint and `tsc --noEmit` clean; no console errors
+- [ ] 18. README (pitch, architecture diagram, features, recruiter demo bullets)
+- [ ] 19. Deploy to Netlify with env vars; test live; push to GitHub; update root `LINKS.md`
+
+## Phase 2
+- Send from inside Apex (Gmail API as the user, or Resend free tier with reply-to)
+- Offline queue, re-generate with a different tone, team or shared business profiles
