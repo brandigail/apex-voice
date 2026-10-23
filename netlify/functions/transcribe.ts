@@ -1,6 +1,7 @@
 import { extensionForMime } from '../../src/lib/audio-mime.ts'
 import type { TranscribeResponse } from '../../src/types/api.ts'
 import { errorResponse, json } from './_lib/http.ts'
+import { claimQuota } from './_lib/rate-limit.ts'
 import { requireUser } from './_lib/session.ts'
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/audio/transcriptions'
@@ -37,6 +38,9 @@ export default async function handler(req: Request): Promise<Response> {
   if (audio.type && !audio.type.startsWith('audio/') && !audio.type.startsWith('video/')) {
     return errorResponse(415, 'Unsupported file type.')
   }
+
+  const quota = await claimQuota(session.user.id, 'transcribe')
+  if (!quota.ok) return quota.response
 
   const upstream = new FormData()
   upstream.set('file', audio, `audio.${extensionForMime(audio.type)}`)

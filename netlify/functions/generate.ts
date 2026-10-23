@@ -3,6 +3,7 @@ import { generateRequestSchema, generatedDraftSchema } from '../../src/types/dra
 import type { GeneratedDraft } from '../../src/types/draft.ts'
 import { retryPrompt, systemPrompt, userPrompt } from './_lib/draft-prompt.ts'
 import { errorResponse, json } from './_lib/http.ts'
+import { claimQuota } from './_lib/rate-limit.ts'
 import { requireUser } from './_lib/session.ts'
 import { withSignature } from './_lib/signature.ts'
 
@@ -86,6 +87,9 @@ export default async function handler(req: Request): Promise<Response> {
   }
   const request = generateRequestSchema.safeParse(body)
   if (!request.success) return errorResponse(400, 'A transcript of 1 to 10,000 characters is required.')
+
+  const quota = await claimQuota(session.user.id, 'generate')
+  if (!quota.ok) return quota.response
 
   const { profile } = session.user
   const startedAt = Date.now()
