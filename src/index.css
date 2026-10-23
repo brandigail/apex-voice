@@ -7,3 +7,34 @@ body,
 #root {
   min-height: 100%;
 }
+
+/* Tailwind v4's reset leaves buttons with the default arrow cursor, so restore the pointer for anything clickable. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href],
+  select,
+  summary {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  /* Visible hover and press feedback for every button and link. */
+  button,
+  a[href] {
+    transition:
+      background-color 150ms,
+      color 150ms,
+      border-color 150ms,
+      opacity 150ms;
+  }
+
+  button:not(:disabled):active,
+  a[href]:active {
+    opacity: 0.8;
+  }
+}

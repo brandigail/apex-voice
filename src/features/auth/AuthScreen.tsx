@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { AudioWaveform } from 'lucide-react'
+import { AudioWaveform, Eye, EyeOff } from 'lucide-react'
 import { authClient } from '../../lib/auth-client'
 
 type Mode = 'sign-in' | 'sign-up'
@@ -14,6 +14,7 @@ export function AuthScreen() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const signingUp = mode === 'sign-up'
 
@@ -83,17 +84,28 @@ export function AuthScreen() {
           <label htmlFor="auth-password" className="mb-1 block text-sm font-medium">
             Password
           </label>
-          <input
-            id="auth-password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete={signingUp ? 'new-password' : 'current-password'}
-            minLength={8}
-            required
-            aria-describedby={signingUp ? 'auth-password-hint' : undefined}
-            className={fieldClass}
-          />
+          <div className="relative">
+            <input
+              id="auth-password"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete={signingUp ? 'new-password' : 'current-password'}
+              minLength={8}
+              required
+              aria-describedby={signingUp ? 'auth-password-hint' : undefined}
+              className={`${fieldClass} pr-12`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((shown) => !shown)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-pressed={showPassword}
+              className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-slate-500 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-indigo-500 dark:text-slate-400 dark:hover:text-slate-100"
+            >
+              {showPassword ? <EyeOff className="size-5" aria-hidden="true" /> : <Eye className="size-5" aria-hidden="true" />}
+            </button>
+          </div>
           {signingUp && (
             <p id="auth-password-hint" className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               At least 8 characters.
@@ -121,7 +133,7 @@ export function AuthScreen() {
         <button
           type="button"
           onClick={switchMode}
-          className="font-medium text-indigo-600 underline focus-visible:outline-2 focus-visible:outline-indigo-500 dark:text-indigo-400"
+          className="font-medium text-indigo-600 underline hover:text-indigo-800 focus-visible:outline-2 focus-visible:outline-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-200"
         >
           {signingUp ? 'Sign in' : 'Create an account'}
         </button>
