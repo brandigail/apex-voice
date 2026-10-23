@@ -12,7 +12,7 @@
 - [x] 10. Accounts: Better Auth (email + password) on Neon; sign up, sign in, sign out UI; functions check the session cookie instead of the shared passcode
 - [x] 11. Profile and sign-off: display name, business name, role, phone, signature; settings screen; `generate` writes drafts in the user's name and sign-off
 - [x] 12. Per-user rate limiting and daily quota on `transcribe` and `generate` (sign-up is open, so protect the Groq quota)
-- [ ] 13. `netlify/functions/db-sync.ts` (list, upsert, delete, scoped to the signed-in user) and a client sync layer
+- [x] 13. `netlify/functions/db-sync.ts` (list, upsert, delete, scoped to the signed-in user) and a client sync layer
 - [ ] 14. Draft history screen with search and category filter
 - [ ] 15. PWA: manifest, icons in `/public`, `vite-plugin-pwa` prompt-for-update banner, offline shell
 - [ ] 16. Test the full flow on desktop Chrome and a real phone (iOS Safari and Android Chrome)

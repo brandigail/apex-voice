@@ -3,6 +3,7 @@ import { DraftCard } from './DraftCard'
 import { RecordButton, type RecordButtonMode } from './RecordButton'
 import { RecordTimer } from './RecordTimer'
 import { MAX_RECORDING_SECONDS, useAudioRecorder } from './useAudioRecorder'
+import { useDraftAutosave } from './useDraftAutosave'
 import { useVoiceNote, type VoiceNoteStage } from './useVoiceNote'
 
 const STAGE_LABEL: Partial<Record<VoiceNoteStage, string>> = {
@@ -16,6 +17,7 @@ const secondaryButton =
 export function RecordView() {
   const note = useVoiceNote()
   const recorder = useAudioRecorder(note.run)
+  const saveStatus = useDraftAutosave(note.result)
 
   const processing = note.stage === 'transcribing' || note.stage === 'structuring'
   const recording = recorder.status === 'recording'
@@ -94,7 +96,7 @@ export function RecordView() {
 
       {note.result && (
         <>
-          <DraftCard result={note.result} onChange={note.updateDraft} />
+          <DraftCard result={note.result} onChange={note.updateDraft} saveStatus={saveStatus} />
           <button type="button" onClick={startNew} className={secondaryButton}>
             <RotateCcw className="size-4" aria-hidden="true" />
             New recording

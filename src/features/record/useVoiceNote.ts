@@ -7,6 +7,9 @@ import type { RecordedAudio } from './useAudioRecorder'
 export type VoiceNoteStage = 'idle' | 'transcribing' | 'structuring' | 'done' | 'error'
 
 export interface VoiceNoteResult {
+  /** Generated on the client so the draft can be saved (and later queued offline) under a stable id. */
+  id: string
+  createdAt: string
   transcript: string
   draft: GeneratedDraft
 }
@@ -56,7 +59,7 @@ export function useVoiceNote(): UseVoiceNote {
         const draft = await generateDraft(transcript)
         if (!isCurrent()) return
 
-        setResult({ transcript, draft })
+        setResult({ id: crypto.randomUUID(), createdAt: new Date().toISOString(), transcript, draft })
         setStage('done')
       } catch (err) {
         if (!isCurrent()) return

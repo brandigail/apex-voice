@@ -2,12 +2,21 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, Copy, Mail, MessageSquare } from 'lucide-react'
 import { EMAIL_PROVIDERS, buildEmailUrl, buildSmsUrl, draftToText, type EmailProvider } from '../../lib/share'
 import { DRAFT_CATEGORIES, type DraftCategory, type GeneratedDraft } from '../../types/draft'
+import type { SaveStatus } from './useDraftAutosave'
 import { useEmailProvider } from './useEmailProvider'
 import type { VoiceNoteResult } from './useVoiceNote'
 
 interface DraftCardProps {
   result: VoiceNoteResult
   onChange: (patch: Partial<GeneratedDraft>) => void
+  saveStatus: SaveStatus
+}
+
+const SAVE_LABEL: Record<SaveStatus, string> = {
+  idle: '',
+  saving: 'Saving…',
+  saved: 'Saved to history',
+  error: 'Could not save to history. Your edits are still here; keep editing to retry.',
 }
 
 type CopyState = 'idle' | 'copied' | 'failed'
@@ -24,7 +33,7 @@ const fieldClass =
 const actionClass =
   'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500'
 
-export function DraftCard({ result, onChange }: DraftCardProps) {
+export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
   const { draft, transcript } = result
   const [copyState, setCopyState] = useState<CopyState>('idle')
   const resetTimer = useRef<number | null>(null)
@@ -179,7 +188,15 @@ export function DraftCard({ result, onChange }: DraftCardProps) {
         </div>
       </div>
 
-      <details className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+      <p
+        role="status"
+        aria-live="polite"
+        className={`mt-3 text-xs ${saveStatus === 'error' ? 'text-red-700 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}
+      >
+        {SAVE_LABEL[saveStatus]}
+      </p>
+
+      <details className="mt-2 text-sm text-slate-500 dark:text-slate-400">
         <summary className="cursor-pointer">Transcript</summary>
         <p className="mt-2 whitespace-pre-wrap">{transcript}</p>
       </details>

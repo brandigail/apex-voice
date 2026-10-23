@@ -19,12 +19,12 @@ export class ApiRequestError extends Error {
 const transcribeResponseSchema = z.object({ text: z.string().min(1) })
 const generateResponseSchema = z.object({ draft: generatedDraftSchema })
 
-async function send(path: string, init: RequestInit): Promise<unknown> {
+export async function request(path: string, init: RequestInit = {}): Promise<unknown> {
   let response: Response
   try {
     response = await fetch(path, {
       ...init,
-      method: 'POST',
+      method: init.method ?? 'POST',
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     })
   } catch (err) {
@@ -53,7 +53,7 @@ async function send(path: string, init: RequestInit): Promise<unknown> {
 export async function transcribeAudio(blob: Blob, mimeType: string): Promise<string> {
   const form = new FormData()
   form.set('audio', blob, `recording.${extensionForMime(mimeType)}`)
-  const data = transcribeResponseSchema.safeParse(await send('/api/transcribe', { body: form }))
+  const data = transcribeResponseSchema.safeParse(await request('/api/transcribe', { body: form }))
   if (!data.success) throw new ApiRequestError(502, 'The server sent an unexpected response.')
   return data.data.text
 }
@@ -61,7 +61,7 @@ export async function transcribeAudio(blob: Blob, mimeType: string): Promise<str
 export async function generateDraft(transcript: string): Promise<GeneratedDraft> {
   const payload: GenerateRequest = { transcript }
   const data = generateResponseSchema.safeParse(
-    await send('/api/generate', {
+    await request('/api/generate', {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     }),

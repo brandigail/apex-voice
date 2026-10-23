@@ -1,4 +1,4 @@
-import type { GeneratedDraft } from './draft.ts'
+import type { Draft, GeneratedDraft } from './draft.ts'
 
 export interface ApiError {
   error: string
@@ -6,6 +6,14 @@ export interface ApiError {
 
 export interface TranscribeResponse {
   text: string
+}
+
+export interface ListDraftsResponse {
+  drafts: Draft[]
+}
+
+export interface SaveDraftResponse {
+  draft: Draft
 }
 
 export interface GenerateRequest {
