@@ -88,12 +88,40 @@ function expand(event: VEvent, from: Date, to: Date): AgendaItem[] {
     .map((start) => toItem(event, start, finish(start), uid))
 }
 
+const GOOGLE_HINT =
+  'In Google Calendar copy the "Secret address in iCal format". It starts with https://calendar.google.com/calendar/ical/ and ends in basic.ics.'
+
+/** A pasted web page address (rather than the calendar's iCal address) is the most common mistake; say so straight away. */
+function wrongLinkKind(url: URL): string | null {
+  const isGoogle = url.hostname === 'calendar.google.com'
+  if (isGoogle && !url.pathname.includes('/ical/')) {
+    return `That is the address of a Google Calendar web page, not the calendar link. ${GOOGLE_HINT}`
+  }
+  return null
+}
+
+/** Turns a failed download into something a person can act on. */
+function friendlyError(message: string, url: URL): string {
+  const status = /^status (\d+)$/.exec(message)?.[1]
+  const google = url.hostname === 'calendar.google.com' ? ` ${GOOGLE_HINT}` : ''
+  if (status === '401' || status === '403') {
+    return `That link asks for a sign-in, so it is not the private calendar address.${google || ' Look for a "secret" or "private" iCal / ICS address in your calendar settings.'}`
+  }
+  if (status === '404' || status === '410') {
+    return `That calendar address was not found. If you reset the secret address, copy the new one.${google}`
+  }
+  if (message === 'too large') return 'That calendar is too big to read. Try a calendar with fewer events.'
+  return 'Could not read your calendar link. Check it in your profile.'
+}
+
 /** Reads the user's private calendar link and returns the events that fall between `from` and `to`. */
 export async function readCalendar(rawUrl: string, from: Date, to: Date): Promise<CalendarResult> {
   const url = parseCalendarUrl(rawUrl)
   if (!url || !isPublicHost(url.hostname)) {
     return { ok: false, error: 'The calendar link must be a public https or webcal address.' }
   }
+  const wrong = wrongLinkKind(url)
+  if (wrong) return { ok: false, error: wrong }
 
   try {
     const cached = cache.get(url.toString())
@@ -109,7 +137,8 @@ export async function readCalendar(rawUrl: string, from: Date, to: Date): Promis
     }
     return { ok: true, items }
   } catch (err) {
-    console.error('Calendar read failed:', err instanceof Error ? err.message : err)
-    return { ok: false, error: 'Could not read your calendar link. Check it in your profile.' }
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('Calendar read failed:', message)
+    return { ok: false, error: friendlyError(message, url) }
   }
 }
