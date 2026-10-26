@@ -1,7 +1,6 @@
 import { pickMimeType, toRecorderError } from '../record/recorder-utils'
+import { silenceMs } from './patience'
 
-/** How long the user must stay quiet before we decide they have finished. Long on purpose: people pause to think. */
-export const SILENCE_MS = 2_200
 /** Shorter blips of sound are coughs and clicks, not a request. */
 const MIN_SPEECH_MS = 350
 /** Listening to the room first lets the threshold sit above its background noise. */
@@ -35,7 +34,7 @@ export interface ListenerEvents {
 
 /**
  * Keeps the microphone open for a whole conversation and cuts it into spoken turns. A turn ends after
- * {@link SILENCE_MS} of quiet, so the assistant never answers while the user is still talking.
+ * the user's chosen silence (see patience.ts) of quiet, so the assistant never answers while the user is still talking.
  */
 export class Listener {
   private stream: MediaStream | null = null
@@ -59,6 +58,7 @@ export class Listener {
   private threshold = MIN_THRESHOLD
   private heard = false
   private idleSince = 0
+  private silenceLimit = 0
 
   constructor(private readonly events: ListenerEvents) {}
 
@@ -99,6 +99,7 @@ export class Listener {
     this.threshold = MIN_THRESHOLD
     this.turnStartedAt = performance.now()
     this.idleSince = this.turnStartedAt
+    this.silenceLimit = silenceMs()
     this.lastSpeechAt = 0
     this.startRecorder()
     this.timer = window.setInterval(() => this.tick(), TICK_MS)
@@ -174,7 +175,7 @@ export class Listener {
     }
 
     if (this.heard) {
-      if (now - this.lastSpeechAt >= SILENCE_MS) void this.endTurn()
+      if (now - this.lastSpeechAt >= this.silenceLimit) void this.endTurn()
       else if (now - this.recorderStartedAt >= SEGMENT_MS) void this.rotateRecorder()
       return
     }
