@@ -50,7 +50,7 @@ function TextField({ id, label, value, max, onChange, required, type = 'text', a
 }
 
 /** The form is keyed on the user id, so it initialises once from the stored profile and then owns its own edits. */
-function ProfileForm({ initial }: { initial: Profile }) {
+function ProfileForm({ initial, email }: { initial: Profile; email: string }) {
   const [profile, setProfile] = useState<Profile>(initial)
   const [save, setSave] = useState<SaveState>({ kind: 'idle' })
 
@@ -127,7 +127,7 @@ function ProfileForm({ initial }: { initial: Profile }) {
         autoComplete="tel"
       />
 
-      <CalendarConnect url={profile.calendarUrl} onChange={saveCalendar} />
+      <CalendarConnect accountEmail={email} url={profile.calendarUrl} onChange={saveCalendar} />
 
       <div>
         <label htmlFor="profile-signature" className="mb-1.5 block text-sm font-semibold">
@@ -190,7 +190,7 @@ export function ProfileView({ user, showSubscriptions }: ProfileViewProps) {
         Drafts are written in your name and signed for you, so you never have to dictate a sign-off. Signed in as{' '}
         <span className="font-semibold">{user.email}</span>.
       </p>
-      <ProfileForm key={user.id} initial={profileFromUser(user)} />
+      <ProfileForm key={user.id} initial={profileFromUser(user)} email={user.email} />
       {showSubscriptions && <SubscriptionSection />}
     </section>
   )

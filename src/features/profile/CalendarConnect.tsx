@@ -24,9 +24,10 @@ const PROVIDERS: readonly Provider[] = [
     openLabel: 'Open Google Calendar settings',
     openUrl: 'https://calendar.google.com/calendar/u/0/r/settings',
     steps: [
-      'Under "Settings for my calendars", tap your calendar.',
-      'Scroll down to "Integrate calendar".',
-      'Copy the "Secret address in iCal format".',
+      'Use a computer if you can. The Google Calendar app and phone site do not show this setting. On a phone, open the link in Chrome, tap the three dots and choose "Desktop site".',
+      'Tap the button below. It opens the settings for your own calendar (sign in to Google if asked).',
+      'Scroll down to "Integrate calendar" and copy the "Secret address in iCal format". It is a long link ending in basic.ics.',
+      'Come back here and tap "Paste the link and test it".',
     ],
     accent: '#4285f4',
   },
@@ -71,7 +72,15 @@ const checkSchema = z.object({
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
 
+/** Google can open the settings of one specific calendar when its id (the account email) is base64 encoded into the address. */
+function googleSettingsUrl(email: string): string {
+  const id = btoa(email.trim()).replace(/=+$/, '')
+  return `https://calendar.google.com/calendar/u/0/r/settings/calendar/${id}`
+}
+
 interface CalendarConnectProps {
+  /** The email the user signed up to Apex with; used as the starting guess for their Google account. */
+  accountEmail: string
   /** The saved calendar address, or "" when none is linked. */
   url: string
   /** Saves the new address (or "" to disconnect). */
@@ -79,7 +88,8 @@ interface CalendarConnectProps {
 }
 
 /** Guides someone through linking their calendar: pick the app, copy the address with a few taps, test it, done. */
-export function CalendarConnect({ url, onChange }: CalendarConnectProps) {
+export function CalendarConnect({ accountEmail, url, onChange }: CalendarConnectProps) {
+  const [googleEmail, setGoogleEmail] = useState(accountEmail)
   const dialogRef = useRef<HTMLDialogElement | null>(null)
   const [provider, setProvider] = useState<Provider | null>(null)
   const [draft, setDraft] = useState('')
@@ -207,8 +217,29 @@ export function CalendarConnect({ url, onChange }: CalendarConnectProps) {
                 ))}
               </ol>
 
+              {provider.id === 'google' && (
+                <div>
+                  <label htmlFor="google-email" className="mb-1.5 block text-sm font-semibold">
+                    Your Google account email
+                  </label>
+                  <input
+                    id="google-email"
+                    type="email"
+                    value={googleEmail}
+                    onChange={(e) => setGoogleEmail(e.target.value)}
+                    autoComplete="email"
+                    className="field"
+                  />
+                </div>
+              )}
+
               {provider.openUrl && (
-                <a href={provider.openUrl} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">
+                <a
+                  href={provider.id === 'google' && googleEmail.includes('@') ? googleSettingsUrl(googleEmail) : provider.openUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-ghost"
+                >
                   <ExternalLink className="size-4" aria-hidden="true" />
                   {provider.openLabel}
                 </a>
