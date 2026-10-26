@@ -20,6 +20,14 @@
 - [ ] 18. README (pitch, architecture diagram, features, recruiter demo bullets)
 - [~] 19. Deploy to Netlify with env vars; test live; push to GitHub; update root `LINKS.md`
 
+## Voice assistant (added 2026-10-26)
+- [x] A1. Channel picker before recording (email, quote, WhatsApp, SMS, Instagram, Facebook, TikTok, note) and a redesign
+- [x] A2. `assistant` function with tool calling: agenda, drafts, sent state, create draft; own model and token budget
+- [x] A3. `speak` function (Groq Orpheus voice) with browser-voice fallback; hands-free listener with silence detection
+- [x] A4. Agenda tab (Apex items plus linked iCal calendar) and "Mark as sent"
+- [ ] A5. Groq accepts the Orpheus terms (console), then tune the voice and reply speed on the live site
+- [ ] A6. Native wrapper (Capacitor) for listening with the screen off
+
 ## Phase 2
 - Send from inside Apex (Gmail API as the user, or Resend free tier with reply-to)
 - Offline queue, re-generate with a different tone, team or shared business profiles

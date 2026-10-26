@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react'
-import { Check, ChevronDown, Copy, Trash2 } from 'lucide-react'
+import { Check, CheckCheck, ChevronDown, Copy, Send, Trash2 } from 'lucide-react'
 import { ChannelIcon } from '../../components/ChannelIcon'
 import { channelFor } from '../../lib/channels'
 import { draftToText } from '../../lib/share'
@@ -8,11 +8,12 @@ import type { Draft } from '../../types/draft'
 interface DraftListItemProps {
   draft: Draft
   onDelete: (id: string) => Promise<boolean>
+  onToggleSent: (id: string, sent: boolean) => Promise<void>
 }
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 
-export function DraftListItem({ draft, onDelete }: DraftListItemProps) {
+export function DraftListItem({ draft, onDelete, onToggleSent }: DraftListItemProps) {
   const [copied, setCopied] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const channel = channelFor(draft.category)
@@ -44,9 +45,17 @@ export function DraftListItem({ draft, onDelete }: DraftListItemProps) {
               <span className="text-xs font-bold tracking-wide uppercase" style={{ color: channel.from }}>
                 {channel.label}
               </span>
-              <time dateTime={draft.createdAt} className="muted text-xs">
-                {dateFormat.format(new Date(draft.createdAt))}
-              </time>
+              <span className="flex items-center gap-2">
+                {draft.sentAt && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                    <CheckCheck className="size-3" aria-hidden="true" />
+                    Sent
+                  </span>
+                )}
+                <time dateTime={draft.createdAt} className="muted text-xs">
+                  {dateFormat.format(new Date(draft.createdAt))}
+                </time>
+              </span>
             </span>
             <span className="truncate font-semibold">{title}</span>
             {draft.recipient && <span className="muted truncate text-sm">To {draft.recipient}</span>}
@@ -61,6 +70,11 @@ export function DraftListItem({ draft, onDelete }: DraftListItemProps) {
             <button type="button" onClick={() => void handleCopy()} className="btn btn-ghost">
               {copied ? <Check className="size-4" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
               {copied ? 'Copied' : 'Copy'}
+            </button>
+
+            <button type="button" onClick={() => void onToggleSent(draft.id, !draft.sentAt)} className="btn btn-ghost">
+              <Send className="size-4" aria-hidden="true" />
+              {draft.sentAt ? 'Mark as not sent' : 'Mark as sent'}
             </button>
 
             {confirming ? (

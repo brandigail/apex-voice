@@ -14,6 +14,7 @@ export function profileFromUser(user: ProfileSource): Profile {
     role: clean(user.role, PROFILE_LIMITS.role),
     phone: clean(user.phone, PROFILE_LIMITS.phone),
     signature: clean(user.signature, PROFILE_LIMITS.signature),
+    calendarUrl: clean(user.calendarUrl, PROFILE_LIMITS.calendarUrl),
   }
 }
 

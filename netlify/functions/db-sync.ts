@@ -2,7 +2,7 @@ import { neon, type NeonQueryFunction } from '@neondatabase/serverless'
 import type { Config } from '@netlify/functions'
 import { z } from 'zod'
 import type { ListDraftsResponse, SaveDraftResponse } from '../../src/types/api.ts'
-import { draftSchema } from '../../src/types/draft-schema.ts'
+import { markSentRequestSchema, saveDraftSchema } from '../../src/types/draft-schema.ts'
 import type { Draft, DraftCategory } from '../../src/types/draft.ts'
 import { errorResponse, json } from './_lib/http.ts'
 import { requireUser } from './_lib/session.ts'
@@ -20,9 +20,10 @@ interface DraftRow {
   transcript: string
   created_at: string | Date
   updated_at: string | Date
+  sent_at: string | Date | null
 }
 
-const COLUMNS = 'id, category, recipient, subject, body, transcript, created_at, updated_at'
+const COLUMNS = 'id, category, recipient, subject, body, transcript, created_at, updated_at, sent_at'
 
 function toDraft(row: DraftRow): Draft {
   return {
@@ -34,6 +35,7 @@ function toDraft(row: DraftRow): Draft {
     transcript: row.transcript,
     createdAt: new Date(row.created_at).toISOString(),
     updatedAt: new Date(row.updated_at).toISOString(),
+    sentAt: row.sent_at ? new Date(row.sent_at).toISOString() : null,
   }
 }
 
@@ -66,6 +68,7 @@ export default async function handler(req: Request): Promise<Response> {
     if (id !== null && !z.uuid().safeParse(id).success) return errorResponse(400, 'Invalid draft id.')
 
     if (req.method === 'PUT' && id !== null) return await upsert(req, sql, userId, id)
+    if (req.method === 'PATCH' && id !== null) return await markSent(req, sql, userId, id)
 
     if (req.method === 'DELETE' && id !== null) {
       const deleted = await sql.query('DELETE FROM drafts WHERE id = $1 AND user_id = $2 RETURNING id', [id, userId])
@@ -86,7 +89,7 @@ async function upsert(req: Request, sql: NeonQueryFunction<false, false>, userId
   } catch {
     return errorResponse(400, 'Send a JSON body.')
   }
-  const parsed = draftSchema.safeParse(body)
+  const parsed = saveDraftSchema.safeParse(body)
   if (!parsed.success || parsed.data.id !== id) return errorResponse(400, 'That draft is not valid.')
   const draft = parsed.data
 
@@ -114,3 +117,14 @@ async function upsert(req: Request, sql: NeonQueryFunction<false, false>, userId
 }
 
 export const config: Config = { path: ['/api/drafts', '/api/drafts/*'] }
+
+async function markSent(req: Request, sql: NeonQueryFunction<false, false>, userId: string, id: string): Promise<Response> {
+  const parsed = markSentRequestSchema.safeParse(await req.json().catch(() => null))
+  if (!parsed.success) return errorResponse(400, 'Send {"sent": true} or {"sent": false}.')
+  const rows = (await sql.query(
+    `UPDATE drafts SET sent_at = CASE WHEN $3 THEN now() ELSE NULL END, updated_at = now()
+     WHERE id = $1 AND user_id = $2 RETURNING ${COLUMNS}`,
+    [id, userId, parsed.data.sent],
+  )) as DraftRow[]
+  return rows.length > 0 ? json<SaveDraftResponse>({ draft: toDraft(rows[0]) }) : errorResponse(404, 'Draft not found.')
+}

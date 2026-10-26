@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { AppShell } from './components/AppShell'
 import type { Tab } from './components/TabBar'
 import { AuthScreen } from './features/auth/AuthScreen'
+import { AgendaView } from './features/agenda/AgendaView'
+import { AssistantView } from './features/assistant/AssistantView'
 import { HistoryView } from './features/history/HistoryView'
 import { ProfileView } from './features/profile/ProfileView'
 import { RecordView } from './features/record/RecordView'
@@ -21,6 +23,10 @@ export default function App() {
         <AuthScreen />
       ) : tab === 'record' ? (
         <RecordView />
+      ) : tab === 'assistant' ? (
+        <AssistantView firstName={session.user.name.trim().split(/\s+/)[0] ?? ''} onNavigate={setTab} />
+      ) : tab === 'agenda' ? (
+        <AgendaView onNavigate={setTab} />
       ) : tab === 'history' ? (
         <HistoryView />
       ) : (

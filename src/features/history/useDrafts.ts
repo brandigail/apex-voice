@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApiRequestError } from '../../lib/api'
-import { deleteDraft, listDrafts } from '../../lib/drafts-api'
+import { deleteDraft, listDrafts, markDraftSent } from '../../lib/drafts-api'
 import type { Draft } from '../../types/draft'
 
 export type DraftsStatus = 'loading' | 'ready' | 'error'
@@ -12,6 +12,8 @@ export interface UseDrafts {
   reload: () => void
   /** Removes the draft from the list straight away and puts it back if the server refuses. Returns whether it worked. */
   remove: (id: string) => Promise<boolean>
+  /** Marks the draft as sent (or not) and shows the change straight away. */
+  setSent: (id: string, sent: boolean) => Promise<void>
 }
 
 function messageFrom(err: unknown): string {
@@ -64,5 +66,15 @@ export function useDrafts(): UseDrafts {
     [drafts],
   )
 
-  return { drafts, status, error, reload, remove }
+  const setSent = useCallback(async (id: string, sent: boolean) => {
+    try {
+      const updated = await markDraftSent(id, sent)
+      setDrafts((current) => current.map((draft) => (draft.id === id ? updated : draft)))
+      setError(null)
+    } catch (err) {
+      setError(messageFrom(err))
+    }
+  }, [])
+
+  return { drafts, status, error, reload, remove, setSent }
 }

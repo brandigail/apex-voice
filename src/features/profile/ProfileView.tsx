@@ -104,6 +104,29 @@ function ProfileForm({ initial }: { initial: Profile }) {
       />
 
       <div>
+        <label htmlFor="profile-calendar" className="mb-1.5 block text-sm font-semibold">
+          Calendar link <span className="muted font-normal">(optional)</span>
+        </label>
+        <input
+          id="profile-calendar"
+          type="url"
+          inputMode="url"
+          value={profile.calendarUrl}
+          maxLength={PROFILE_LIMITS.calendarUrl}
+          onChange={(e) => set('calendarUrl')(e.target.value)}
+          placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"
+          autoComplete="off"
+          aria-describedby="profile-calendar-hint"
+          className="field"
+        />
+        <p id="profile-calendar-hint" className="muted mt-1 text-xs">
+          Paste your calendar's private iCal address so the assistant knows your meetings. Apex only reads it. In Google
+          Calendar: Settings, your calendar, "Secret address in iCal format". Outlook and Apple calendars have a similar
+          "publish" or "share" link. Treat it like a password.
+        </p>
+      </div>
+
+      <div>
         <label htmlFor="profile-signature" className="mb-1.5 block text-sm font-semibold">
           Custom sign-off <span className="font-normal muted">(optional)</span>
         </label>

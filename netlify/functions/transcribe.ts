@@ -40,7 +40,9 @@ export default async function handler(req: Request): Promise<Response> {
     return errorResponse(415, 'Unsupported file type.')
   }
 
-  const quota = await claimQuota(session.user.id, 'transcribe')
+  // Assistant conversations send many short clips, so they are metered separately from one-off recordings.
+  const forAssistant = new URL(req.url).searchParams.get('for') === 'assistant'
+  const quota = await claimQuota(session.user.id, forAssistant ? 'listen' : 'transcribe')
   if (!quota.ok) return quota.response
 
   const upstream = new FormData()

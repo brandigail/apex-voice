@@ -6,7 +6,7 @@ import { HistoryFilters } from './HistoryFilters'
 import { useDrafts } from './useDrafts'
 
 export function HistoryView() {
-  const { drafts, status, error, reload, remove } = useDrafts()
+  const { drafts, status, error, reload, remove, setSent } = useDrafts()
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<DraftCategory | 'ALL'>('ALL')
 
@@ -74,7 +74,7 @@ export function HistoryView() {
       {visible.length > 0 && (
         <ul className="mt-4 flex flex-col gap-3">
           {visible.map((draft) => (
-            <DraftListItem key={draft.id} draft={draft} onDelete={remove} />
+            <DraftListItem key={draft.id} draft={draft} onDelete={remove} onToggleSent={setSent} />
           ))}
         </ul>
       )}

@@ -50,10 +50,12 @@ export async function request(path: string, init: RequestInit = {}): Promise<unk
   }
 }
 
-export async function transcribeAudio(blob: Blob, mimeType: string): Promise<string> {
+/** `forAssistant` bills the clip to the assistant's own quota instead of the one-off recording quota. */
+export async function transcribeAudio(blob: Blob, mimeType: string, forAssistant = false): Promise<string> {
   const form = new FormData()
   form.set('audio', blob, `recording.${extensionForMime(mimeType)}`)
-  const data = transcribeResponseSchema.safeParse(await request('/api/transcribe', { body: form }))
+  const path = forAssistant ? '/api/transcribe?for=assistant' : '/api/transcribe'
+  const data = transcribeResponseSchema.safeParse(await request(path, { body: form }))
   if (!data.success) throw new ApiRequestError(502, 'The server sent an unexpected response.')
   return data.data.text
 }

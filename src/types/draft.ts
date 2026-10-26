@@ -16,4 +16,9 @@ export interface Draft extends GeneratedDraft {
   transcript: string
   createdAt: string
   updatedAt: string
+  /** When the user (or the assistant, on their word) marked it as sent; null while it is still a draft. */
+  sentAt: string | null
 }
+
+/** What the client uploads when saving: the sent state is changed only through its own call. */
+export type SaveDraftInput = Omit<Draft, 'sentAt'>

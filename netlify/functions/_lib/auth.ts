@@ -34,6 +34,7 @@ export const auth = betterAuth({
       role: { type: 'string', required: false },
       phone: { type: 'string', required: false },
       signature: { type: 'string', required: false },
+      calendarUrl: { type: 'string', required: false },
     },
   },
 })

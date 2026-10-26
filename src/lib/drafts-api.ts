@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { Draft } from '../types/draft'
+import type { Draft, SaveDraftInput } from '../types/draft'
 import { draftSchema } from '../types/draft-schema'
 import { ApiRequestError, request } from './api'
 
@@ -15,12 +15,25 @@ export async function listDrafts(): Promise<Draft[]> {
 }
 
 /** Creates the draft, or updates it if the id already exists. */
-export async function saveDraft(draft: Draft): Promise<Draft> {
+export async function saveDraft(draft: SaveDraftInput): Promise<Draft> {
   const data = saveResponseSchema.safeParse(
     await request(`/api/drafts/${draft.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(draft),
+    }),
+  )
+  if (!data.success) throw unexpected()
+  return data.data.draft
+}
+
+/** Records that the user sent the draft (or takes that back). */
+export async function markDraftSent(id: string, sent: boolean): Promise<Draft> {
+  const data = saveResponseSchema.safeParse(
+    await request(`/api/drafts/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sent }),
     }),
   )
   if (!data.success) throw unexpected()

@@ -1,7 +1,7 @@
 import { neon } from '@neondatabase/serverless'
 import { errorResponse } from './http.ts'
 
-export type MeteredEndpoint = 'transcribe' | 'generate'
+export type MeteredEndpoint = 'transcribe' | 'generate' | 'assistant' | 'listen' | 'speak'
 
 export interface QuotaLimits {
   /** Calls one user may make in any rolling minute. */
@@ -19,11 +19,29 @@ function globalPerDay(): number {
   return Number.isInteger(configured) && configured > 0 ? configured : DEFAULT_GLOBAL_PER_DAY
 }
 
+function positiveInt(value: string | undefined, fallback: number): number {
+  const configured = Number(value)
+  return Number.isInteger(configured) && configured > 0 ? configured : fallback
+}
+
+/**
+ * The voice assistant is the expensive feature (every turn is a transcription, a reply and several spoken
+ * sentences), so it has its own, tighter caps. `ASSISTANT_DAILY_LIMIT` changes the per-user turns a day.
+ */
 export function limitsFor(endpoint: MeteredEndpoint): QuotaLimits {
-  // A recording is transcribed once, but "Try again" can regenerate a draft, so generate gets more headroom.
-  return endpoint === 'transcribe'
-    ? { perMinute: 6, perDay: 30, globalPerDay: globalPerDay() }
-    : { perMinute: 10, perDay: 60, globalPerDay: globalPerDay() }
+  switch (endpoint) {
+    case 'transcribe':
+      // A recording is transcribed once, but "Try again" can regenerate a draft, so generate gets more headroom.
+      return { perMinute: 6, perDay: 30, globalPerDay: globalPerDay() }
+    case 'generate':
+      return { perMinute: 10, perDay: 60, globalPerDay: globalPerDay() }
+    case 'assistant':
+      return { perMinute: 6, perDay: positiveInt(process.env.ASSISTANT_DAILY_LIMIT, 40), globalPerDay: 300 }
+    case 'listen':
+      return { perMinute: 12, perDay: 80, globalPerDay: 500 }
+    case 'speak':
+      return { perMinute: 24, perDay: 250, globalPerDay: 1500 }
+  }
 }
 
 interface UsageCounts {
@@ -80,8 +98,16 @@ export async function claimQuota(
   }
 }
 
+const NOUN: Record<MeteredEndpoint, string> = {
+  transcribe: 'recordings',
+  generate: 'drafts',
+  assistant: 'assistant turns',
+  listen: 'assistant voice clips',
+  speak: 'spoken replies',
+}
+
 function denial(counts: UsageCounts, limits: QuotaLimits, endpoint: MeteredEndpoint): Response {
-  const noun = endpoint === 'transcribe' ? 'recordings' : 'drafts'
+  const noun = NOUN[endpoint]
   if (counts.day_count >= limits.perDay) {
     return errorResponse(429, `You have reached the limit of ${limits.perDay} ${noun} in 24 hours. Please try again later.`)
   }

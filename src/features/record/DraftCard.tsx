@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { Check, Copy, ExternalLink, Mail, MessageCircle, MessageSquare, Share2 } from 'lucide-react'
+import { Check, CheckCheck, Copy, ExternalLink, Mail, MessageCircle, MessageSquare, Send, Share2 } from 'lucide-react'
 import { ChannelIcon } from '../../components/ChannelIcon'
 import { bodyLabel, channelFor, hasRecipient, hasSubject, subjectLabel } from '../../lib/channels'
 import {
@@ -13,6 +13,7 @@ import {
 } from '../../lib/share'
 import type { GeneratedDraft } from '../../types/draft'
 import type { SaveStatus } from './useDraftAutosave'
+import { markDraftSent } from '../../lib/drafts-api'
 import { useEmailProvider } from './useEmailProvider'
 import type { VoiceNoteResult } from './useVoiceNote'
 
@@ -37,6 +38,7 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
   const { draft, transcript } = result
   const channel = channelFor(draft.category)
   const [copyState, setCopyState] = useState<CopyState>('idle')
+  const [sent, setSent] = useState(false)
   const resetTimer = useRef<number | null>(null)
   const [emailProvider, setEmailProvider] = useEmailProvider()
   const providerLabel = EMAIL_PROVIDERS.find((p) => p.id === emailProvider)?.label ?? 'mail'
@@ -64,6 +66,17 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
     }
     if (resetTimer.current !== null) window.clearTimeout(resetTimer.current)
     resetTimer.current = window.setTimeout(() => setCopyState('idle'), 2000)
+  }
+
+  /** Remembers that this one went out, so the assistant can answer "did I already send it?". */
+  const handleSent = async () => {
+    const next = !sent
+    setSent(next)
+    try {
+      await markDraftSent(result.id, next)
+    } catch {
+      setSent(!next)
+    }
   }
 
   /** Opens the device share sheet, which lists every installed mail, chat and notes app. */
@@ -234,6 +247,16 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
                 WhatsApp
               </a>
             )}
+            <button
+              type="button"
+              onClick={() => void handleSent()}
+              disabled={saveStatus !== 'saved'}
+              aria-pressed={sent}
+              className="btn btn-ghost"
+            >
+              {sent ? <CheckCheck className="size-4 text-emerald-500" aria-hidden="true" /> : <Send className="size-4" aria-hidden="true" />}
+              {sent ? 'Marked as sent' : 'Mark as sent'}
+            </button>
             {canNativeShare && (
               <button type="button" onClick={() => void handleShare()} disabled={!canSend} className="btn btn-ghost">
                 <Share2 className="size-4" aria-hidden="true" />
