@@ -37,3 +37,6 @@ keystore.properties
 /android/app/src/main/assets/capacitor.plugins.json
 /android/app/src/main/res/xml/config.xml
 /android-release
+
+# Files made for sharing (audio, text), not part of the app
+/share
