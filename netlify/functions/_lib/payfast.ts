@@ -11,6 +11,12 @@ export interface PayfastConfig {
   merchantKey: string
   /** Optional security passphrase set in the PayFast dashboard; part of every signature when present. */
   passphrase: string
+  /**
+   * False only for PayFast's shared public test merchant, which has a passphrase we are not told, so no signature we
+   * make can match. Requests to it go unsigned (the sandbox accepts that) and each payment is still confirmed with
+   * PayFast's servers. Any merchant of your own, and every live payment, is always signed.
+   */
+  signRequests: boolean
   processUrl: string
   validateUrl: string
   apiUrl: string
@@ -25,6 +31,7 @@ export function payfastConfig(): PayfastConfig {
     merchantId: process.env.PAYFAST_MERCHANT_ID || (live ? '' : SANDBOX_MERCHANT_ID),
     merchantKey: process.env.PAYFAST_MERCHANT_KEY || (live ? '' : SANDBOX_MERCHANT_KEY),
     passphrase: process.env.PAYFAST_PASSPHRASE ?? '',
+    signRequests: live || Boolean(process.env.PAYFAST_MERCHANT_ID),
     processUrl: `${host}/eng/process`,
     validateUrl: `${host}/eng/query/validate`,
     apiUrl: 'https://api.payfast.co.za',
@@ -63,11 +70,13 @@ const FIELD_ORDER = [
 /** Puts the checkout fields in PayFast's order and appends the signature. */
 export function signedCheckoutFields(fields: Record<string, string>, config: PayfastConfig): Record<string, string> {
   const ordered: [string, string][] = FIELD_ORDER.filter((key) => fields[key] !== undefined && fields[key] !== '').map((key) => [key, fields[key]])
+  if (!config.signRequests) return Object.fromEntries(ordered)
   return { ...Object.fromEntries(ordered), signature: signature(ordered, config.passphrase) }
 }
 
 /** Checks the signature on a payment notification (ITN) exactly as PayFast documents it. */
 export function itnSignatureIsValid(entries: readonly (readonly [string, string])[], config: PayfastConfig): boolean {
+  if (!config.signRequests) return true // the shared test merchant's notifications are signed with a passphrase we don't have
   const received = entries.find(([key]) => key === 'signature')?.[1]
   if (!received) return false
   const withoutSignature = entries.filter(([key]) => key !== 'signature')
