@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { buildSignature, profileFromUser } from '../../lib/profile'
 import { SubscriptionSection } from '../subscription/SubscriptionSection'
+import { FeedbackForm } from '../tour/FeedbackForm'
 import { CalendarConnect } from './CalendarConnect'
 import { authClient } from '../../lib/auth-client'
 import { PROFILE_LIMITS, type Profile, type ProfileSource } from '../../types/profile'
@@ -90,7 +91,7 @@ function ProfileForm({ initial, email }: { initial: Profile; email: string }) {
   }
 
   return (
-    <form onSubmit={(e) => void handleSubmit(e)} className="surface mt-6 flex flex-col gap-4 p-6 text-left">
+    <form onSubmit={(e) => void handleSubmit(e)} data-tour="profile-form" className="surface mt-6 flex flex-col gap-4 p-6 text-left">
       <TextField
         id="profile-name"
         label="Your name"
@@ -192,6 +193,14 @@ export function ProfileView({ user, showSubscriptions }: ProfileViewProps) {
       </p>
       <ProfileForm key={user.id} initial={profileFromUser(user)} email={user.email} />
       {showSubscriptions && <SubscriptionSection />}
+
+      <section aria-labelledby="feedback-heading" className="mt-10">
+        <h2 id="feedback-heading" className="text-2xl font-extrabold tracking-tight">
+          Tell us what you think
+        </h2>
+        <p className="muted mt-1 mb-4 text-sm">What is easy, what is slow, what is missing? Anything helps.</p>
+        <FeedbackForm screen="profile" id="profile-feedback" />
+      </section>
     </section>
   )
 }

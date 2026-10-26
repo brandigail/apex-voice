@@ -257,7 +257,28 @@ body {
   }
 }
 
+@keyframes tour-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px rgb(167 139 250 / 0.9), 0 0 0 0 rgb(167 139 250 / 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgb(217 70 239 / 0.95), 0 0 0 14px rgb(167 139 250 / 0);
+  }
+}
+
+/* Applied for a few seconds by the guided tour to point at a control. */
+.tour-pulse {
+  border-radius: 1.25rem;
+  animation: tour-glow 1.4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .tour-pulse {
+    animation: none;
+    box-shadow: 0 0 0 3px rgb(167 139 250 / 0.9);
+  }
+
   .aurora::before,
   .aurora::after {
     animation: none;

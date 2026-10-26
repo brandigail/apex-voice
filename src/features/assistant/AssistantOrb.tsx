@@ -28,6 +28,7 @@ export function AssistantOrb({ phase, onTap, orbRef }: AssistantOrbProps) {
   return (
     <div
       ref={orbRef}
+      data-tour="assistant-orb"
       className="relative flex size-56 items-center justify-center"
       style={{ '--c1': '#6366f1', '--c2': '#d946ef', '--level': 0 } as CSSProperties}
     >

@@ -11,7 +11,7 @@ interface ChannelPickerProps {
 /** Choosing where the message is going before recording lets the AI write it in the right style. */
 export function ChannelPicker({ value, onChange }: ChannelPickerProps) {
   return (
-    <div className="w-full">
+    <div className="w-full" data-tour="channels">
       <div role="radiogroup" aria-label="Record for" className="grid grid-cols-4 gap-2 sm:gap-3">
         {CHANNELS.map((channel) => {
           const selected = channel.id === value

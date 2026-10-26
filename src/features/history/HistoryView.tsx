@@ -22,7 +22,7 @@ export function HistoryView() {
       <h1 id="history-heading" className="text-3xl font-extrabold tracking-tight">
         Your <span className="text-gradient">history</span>
       </h1>
-      <div role="tablist" aria-label="History sections" className="surface mt-4 flex gap-1 p-1">
+      <div role="tablist" aria-label="History sections" data-tour="history-tabs" className="surface mt-4 flex gap-1 p-1">
         {SECTIONS.map(({ id, label }) => (
           <button
             key={id}

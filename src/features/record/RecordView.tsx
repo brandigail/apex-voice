@@ -92,7 +92,7 @@ export function RecordView() {
           )}
 
           {choosing && (
-            <div className="surface flex w-full flex-col gap-3 p-4 sm:flex-row">
+            <div className="surface flex w-full flex-col gap-3 p-4 sm:flex-row" data-tour="languages">
               <SpokenLanguageSelect id="record-spoken-language" />
               <WriteLanguageSelect id="record-write-language" />
             </div>

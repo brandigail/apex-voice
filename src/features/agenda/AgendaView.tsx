@@ -82,7 +82,7 @@ export function AgendaView({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
         </p>
       )}
 
-      <form onSubmit={(e) => void handleAdd(e)} className="surface mt-5 flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
+      <form onSubmit={(e) => void handleAdd(e)} data-tour="agenda-add" className="surface mt-5 flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
         <div className="flex-1">
           <label htmlFor="agenda-title" className="mb-1.5 block text-sm font-semibold">
             Add to agenda

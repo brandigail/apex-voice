@@ -21,6 +21,7 @@ Talk to your business. Apex Voice turns a spoken note into a finished email, quo
 - "Send at" reminders: drafts can wait for the right time, appear on the agenda when due, and the history has a "To send" list; every assistant conversation is saved and listed by date
 - Guided calendar linking (Google, Outlook, Apple) with a one-tap paste and a test before saving
 - A subscription preview, switched on per account with `FEATURE_SUBSCRIPTIONS`: plans with live currency conversion and PayFast checkout (sandbox by default), payment confirmation via PayFast's signed notifications, cancel, and a confirmation email
+- A guided tour (opens on first sign-in, reopened by the "?" button) with a step for each part, example sentences, a "Show me" button that highlights the real control, and a feedback box whose notes are saved for the owner
 - Per-user rate limits and daily quotas, with a tighter cap for the assistant, to protect the free Groq quota
 
 ## Stack

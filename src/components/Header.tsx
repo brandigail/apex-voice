@@ -1,10 +1,10 @@
-import { AudioWaveform, LogOut, Moon, Sun } from 'lucide-react'
+import { AudioWaveform, CircleHelp, LogOut, Moon, Sun } from 'lucide-react'
 import { authClient } from '../lib/auth-client'
 import { useTheme } from '../providers/useTheme'
 
 const iconButton = 'inline-flex size-10 items-center justify-center rounded-full hover:bg-violet-500/15'
 
-export function Header({ signedIn }: { signedIn: boolean }) {
+export function Header({ signedIn, onHelp }: { signedIn: boolean; onHelp: () => void }) {
   const { theme, toggleTheme } = useTheme()
   const isDark = theme === 'dark'
 
@@ -28,6 +28,11 @@ export function Header({ signedIn }: { signedIn: boolean }) {
           >
             {isDark ? <Sun className="size-5" aria-hidden="true" /> : <Moon className="size-5" aria-hidden="true" />}
           </button>
+          {signedIn && (
+            <button type="button" onClick={onHelp} aria-label="How it works" className={iconButton}>
+              <CircleHelp className="size-5" aria-hidden="true" />
+            </button>
+          )}
           {signedIn && (
             <button type="button" onClick={() => void authClient.signOut()} aria-label="Sign out" className={iconButton}>
               <LogOut className="size-5" aria-hidden="true" />
