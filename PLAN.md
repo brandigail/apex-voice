@@ -18,7 +18,7 @@
 - [ ] 16. Test the full flow on desktop Chrome and a real phone (iOS Safari and Android Chrome)
 - [ ] 17. Build, lint and `tsc --noEmit` clean; no console errors
 - [ ] 18. README (pitch, architecture diagram, features, recruiter demo bullets)
-- [ ] 19. Deploy to Netlify with env vars; test live; push to GitHub; update root `LINKS.md`
+- [~] 19. Deploy to Netlify with env vars; test live; push to GitHub; update root `LINKS.md`
 
 ## Phase 2
 - Send from inside Apex (Gmail API as the user, or Resend free tier with reply-to)

@@ -13,7 +13,7 @@ Installable voice-dictation PWA that turns a spoken note into a structured, read
 React, Vite, TypeScript, Tailwind CSS v4, vite-plugin-pwa, Netlify Functions, Neon Postgres, Groq
 
 ## Live demo
-Live demo: TBD
+Live demo: https://apex-voice-app.netlify.app
 
 ## Run locally
 Run locally: TBD
