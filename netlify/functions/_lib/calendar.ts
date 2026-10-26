@@ -97,6 +97,9 @@ function wrongLinkKind(url: URL): string | null {
   if (isGoogle && !url.pathname.includes('/ical/')) {
     return `That is the address of a Google Calendar web page, not the calendar link. ${GOOGLE_HINT}`
   }
+  if (isGoogle && url.pathname.includes('/public/')) {
+    return `That is Google's PUBLIC address, which only works if your calendar is made public to everyone (and you don't want that). Scroll a little further down and copy the SECRET address instead: it contains /private- in the middle. ${GOOGLE_HINT}`
+  }
   return null
 }
 
@@ -108,7 +111,7 @@ function friendlyError(message: string, url: URL): string {
     return `That link asks for a sign-in, so it is not the private calendar address.${google || ' Look for a "secret" or "private" iCal / ICS address in your calendar settings.'}`
   }
   if (status === '404' || status === '410') {
-    return `That calendar address was not found. If you reset the secret address, copy the new one.${google}`
+    return `That calendar address was not found. Check that it is the secret address (it contains /private-) and not the public one, and that you copied all of it. If you reset the secret address, copy the new one.${google}`
   }
   if (message === 'too large') return 'That calendar is too big to read. Try a calendar with fewer events.'
   return 'Could not read your calendar link. Check it in your profile.'
