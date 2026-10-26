@@ -1,22 +1,61 @@
 # Apex Voice
 
-Installable voice-dictation PWA that turns a spoken note into a structured, ready-to-send draft and syncs it across devices.
+Talk to your business. Apex Voice turns a spoken note into a finished email, quote, WhatsApp, SMS or social post, and doubles as a hands-free voice assistant that knows your agenda and what you have already sent. It runs in the browser (installable PWA) and as an Android app.
 
-## Planned features
-- Record in the browser with MediaRecorder
-- Groq Whisper transcription
-- Groq LLM structuring into strict JSON drafts (email, quote, SMS, note)
-- Draft history synced via Neon Postgres
-- PWA with update-prompt banner
+**Live demo:** https://apex-voice-app.netlify.app
+
+## What to demo to a recruiter
+1. **Record for a channel.** Pick WhatsApp, Instagram, Quote and so on, say what you want, and get a draft written in that channel's style (a casual chat message, a caption with hashtags, a priced quote with your signature).
+2. **Hands-free assistant.** Open the Assistant tab and talk. It waits until you stop speaking, answers out loud in a natural voice, and uses tools to check your agenda, search drafts ("did I already send Mr Smith his quote?"), write drafts and add meetings.
+3. **Real mobile app.** The Android build keeps listening with the screen off through a native foreground service, which a browser cannot do.
+
+## Features
+- Voice to draft: Groq Whisper transcription, then Groq LLM with JSON mode validated by zod on the client and the server
+- Eight channels: email, quote, WhatsApp, SMS, Instagram, Facebook, TikTok, note
+- Voice assistant with tool calling (agenda, draft search, create draft, mark as sent), silence-based turn taking, spoken replies (Groq Orpheus) with a browser-voice fallback
+- Agenda: items added in Apex or by voice, plus a read-only link to a private iCal calendar (Google, Outlook, Apple)
+- Per-user accounts (Better Auth, email and password on Neon), profile and automatic signature, draft history with search, filter and "sent" tracking
+- Send options: default mail app, Gmail, Outlook, Yahoo, SMS, WhatsApp, device share sheet
+- PWA with update prompt, light and dark themes, Android app (Capacitor)
+- Per-user rate limits and daily quotas, with a tighter cap for the assistant, to protect the free Groq quota
 
 ## Stack
-React, Vite, TypeScript, Tailwind CSS v4, vite-plugin-pwa, Netlify Functions, Neon Postgres, Groq
+React 19, Vite, TypeScript (strict), Tailwind CSS v4, zod, vite-plugin-pwa, Netlify Functions, Neon Postgres, Better Auth, Groq (Whisper, `openai/gpt-oss` for the assistant, Qwen for drafts, Orpheus for speech), Capacitor (Android).
 
-## Live demo
-Live demo: https://apex-voice-app.netlify.app
+## Architecture
+```
+Browser / Android WebView
+  Listener (mic, silence detection) -> /api/transcribe -> Groq Whisper
+  Assistant loop ----------------> /api/assistant -> Groq LLM + tools -> Neon (drafts, agenda) / iCal feed
+  SpeechPlayer <------------------ /api/speak ------> Groq Orpheus (sentence by sentence, prefetched)
+  Record screen -----------------> /api/generate ---> Groq LLM (one prompt per channel)
+  History / Agenda ---------------> /api/drafts, /api/agenda -> Neon Postgres
+Android shell: Capacitor loads the live site; ListeningService (foreground, microphone) keeps it alive with the screen off.
+```
+Notes: every function requires a session cookie; Groq keys exist only in Netlify function env; replies are chunked to fit the speech model's 200 character limit; each Groq model has its own free token budget, so the assistant and drafts run on different models.
 
 ## Run locally
-Run locally: TBD
+```
+npm install
+cp .env.example .env.local     # add GROQ_API_KEY, DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL
+npm run db:migrate
+npx netlify-cli@latest dev     # http://localhost:8888
+```
+Checks: `npm run build`, `npm run lint`.
 
-## Status
-Rebuild, not started
+## Android app
+The app is a Capacitor shell around the live site, so web deploys reach it without a new APK.
+
+Requirements: Android Studio (for its JDK 21 and the SDK). Build:
+```
+npm run build && npx cap sync android
+cd android
+# debug build
+./gradlew assembleDebug
+# signed release build (needs ~/.apex-voice-signing/keystore.properties, never committed)
+./gradlew assembleRelease
+```
+Install the release APK by copying it to the phone and opening it (allow "install unknown apps" for your file manager or browser). The first conversation asks for microphone and notification permission. iPhone users use the web app.
+
+## Phase 2
+Send from inside Apex (Gmail API or Resend), offline queue, re-generate with a different tone, iOS app.

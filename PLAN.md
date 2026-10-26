@@ -17,7 +17,7 @@
 - [x] 15. PWA: manifest, icons in `/public`, `vite-plugin-pwa` prompt-for-update banner, offline shell
 - [ ] 16. Test the full flow on desktop Chrome and a real phone (iOS Safari and Android Chrome)
 - [ ] 17. Build, lint and `tsc --noEmit` clean; no console errors
-- [ ] 18. README (pitch, architecture diagram, features, recruiter demo bullets)
+- [x] 18. README (pitch, architecture diagram, features, recruiter demo bullets)
 - [~] 19. Deploy to Netlify with env vars; test live; push to GitHub; update root `LINKS.md`
 
 ## Voice assistant (added 2026-10-26)
@@ -25,8 +25,8 @@
 - [x] A2. `assistant` function with tool calling: agenda, drafts, sent state, create draft; own model and token budget
 - [x] A3. `speak` function (Groq Orpheus voice) with browser-voice fallback; hands-free listener with silence detection
 - [x] A4. Agenda tab (Apex items plus linked iCal calendar) and "Mark as sent"
-- [ ] A5. Groq accepts the Orpheus terms (console), then tune the voice and reply speed on the live site
-- [ ] A6. Native wrapper (Capacitor) for listening with the screen off
+- [x] A5. Groq accepts the Orpheus terms (console), then tune the voice and reply speed on the live site
+- [x] A6. Android app (Capacitor shell, foreground microphone service, signed release APK); iPhone stays on the web app
 
 ## Phase 2
 - Send from inside Apex (Gmail API as the user, or Resend free tier with reply-to)

@@ -1,5 +1,6 @@
 import { fetchSpeech } from '../../lib/assistant-api'
 import { MAX_SPEECH_CHARS } from '../../types/assistant'
+import { readStoredVoice } from './voice'
 
 /** Keep each request a little under the model's limit so a trailing space or quote never tips it over. */
 const CHUNK_CHARS = MAX_SPEECH_CHARS - 12
@@ -90,12 +91,13 @@ export class SpeechPlayer {
     const abort = new AbortController()
     this.abort = abort
     const chunks = splitForSpeech(forSpeech(text))
+    const voice = readStoredVoice()
     const fetched = new Map<number, Promise<Blob>>()
     const fetchChunk = (index: number): Promise<Blob> | undefined => {
       if (index >= chunks.length) return undefined
       let pending = fetched.get(index)
       if (!pending) {
-        pending = fetchSpeech(chunks[index])
+        pending = fetchSpeech(chunks[index], voice)
         pending.catch(() => undefined) // a failure is handled where the chunk is awaited
         fetched.set(index, pending)
       }

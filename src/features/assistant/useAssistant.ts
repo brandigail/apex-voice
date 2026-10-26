@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiRequestError, transcribeAudio } from '../../lib/api'
 import { askAssistant } from '../../lib/assistant-api'
 import { authClient } from '../../lib/auth-client'
+import { startBackgroundListening, stopBackgroundListening } from '../../lib/native-listening'
 import type { AssistantAction, AssistantTurn } from '../../types/assistant'
 import { Listener, ScreenLock, type Utterance } from './listener'
 import { SpeechPlayer } from './speech'
@@ -64,6 +65,7 @@ export function useAssistant(firstName: string): UseAssistant {
       session.listener.stop()
       session.player.stop()
       void session.lock.disable()
+      void stopBackgroundListening()
     }
     setPhase('idle')
   }, [])
@@ -180,6 +182,8 @@ export function useAssistant(firstName: string): UseAssistant {
     session = { id: Date.now(), listener, player, lock, history: [] }
     sessionRef.current = session
     void lock.enable()
+    // In the Android app this keeps the microphone alive with the screen off; in a browser it does nothing.
+    void startBackgroundListening()
 
     const greeting = firstName ? `Hi ${firstName}, I'm listening. What can I do for you?` : "Hi, I'm listening. What can I do for you?"
     addLine('assistant', greeting)

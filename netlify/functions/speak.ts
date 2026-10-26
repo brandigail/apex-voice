@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { MAX_SPEECH_CHARS } from '../../src/types/assistant.ts'
+import { ASSISTANT_VOICES, MAX_SPEECH_CHARS } from '../../src/types/assistant.ts'
 import { errorResponse } from './_lib/http.ts'
 import { claimQuota } from './_lib/rate-limit.ts'
 import { requireUser } from './_lib/session.ts'
@@ -10,7 +10,10 @@ const DEFAULT_VOICE = 'hannah'
 /** Netlify's default function timeout is 10 s. */
 const GROQ_TIMEOUT_MS = 8_500
 
-const requestSchema = z.object({ text: z.string().trim().min(1).max(MAX_SPEECH_CHARS) })
+const requestSchema = z.object({
+  text: z.string().trim().min(1).max(MAX_SPEECH_CHARS),
+  voice: z.enum(ASSISTANT_VOICES).optional(),
+})
 
 /** Turns one short piece of text into a natural-sounding voice clip. The client sends a reply a sentence or two at a time. */
 export default async function handler(req: Request): Promise<Response> {
@@ -38,7 +41,7 @@ export default async function handler(req: Request): Promise<Response> {
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: GROQ_MODEL,
-        voice: process.env.GROQ_TTS_VOICE || DEFAULT_VOICE,
+        voice: request.data.voice ?? (process.env.GROQ_TTS_VOICE || DEFAULT_VOICE),
         input: request.data.text,
         response_format: 'wav',
       }),

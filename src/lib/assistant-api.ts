@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { AssistantRequest, AssistantResponse, AssistantTurn } from '../types/assistant'
+import type { AssistantRequest, AssistantResponse, AssistantTurn, AssistantVoice } from '../types/assistant'
 import { MAX_SPEECH_CHARS } from '../types/assistant'
 import { ApiRequestError, request } from './api'
 
@@ -23,13 +23,13 @@ export async function askAssistant(messages: AssistantTurn[]): Promise<Assistant
 }
 
 /** Fetches one short piece of text (up to {@link MAX_SPEECH_CHARS} characters) as a spoken audio clip. */
-export async function fetchSpeech(text: string): Promise<Blob> {
+export async function fetchSpeech(text: string, voice: AssistantVoice): Promise<Blob> {
   let response: Response
   try {
     response = await fetch('/api/speak', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: text.slice(0, MAX_SPEECH_CHARS) }),
+      body: JSON.stringify({ text: text.slice(0, MAX_SPEECH_CHARS), voice }),
       signal: AbortSignal.timeout(REPLY_TIMEOUT_MS),
     })
   } catch {

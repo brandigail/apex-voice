@@ -134,6 +134,8 @@ export class Listener {
   }
 
   private tick(): void {
+    // Phones suspend audio when the screen turns off; wake it again so listening carries on.
+    if (this.context?.state === 'suspended') void this.context.resume().catch(() => undefined)
     const now = performance.now()
     const level = this.level()
     this.events.onLevel(Math.min(1, level * 6))

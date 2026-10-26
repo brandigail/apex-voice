@@ -2,6 +2,7 @@ import { AlertCircle, CalendarPlus, CheckCheck, FilePenLine, Sparkles, Square, T
 import type { Tab } from '../../components/TabBar'
 import type { AssistantAction } from '../../types/assistant'
 import { AssistantOrb } from './AssistantOrb'
+import { VoicePicker } from './VoicePicker'
 import { useAssistant, type AssistantPhase } from './useAssistant'
 
 const STATUS: Record<AssistantPhase, string> = {
@@ -69,6 +70,8 @@ export function AssistantView({ firstName, onNavigate }: AssistantViewProps) {
       <p role="status" aria-live="polite" className="muted -mt-2 min-h-6 max-w-sm text-sm">
         {STATUS[phase]}
       </p>
+
+      {!active && <VoicePicker />}
 
       {active ? (
         <button type="button" onClick={end} className="btn btn-ghost">

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#07060f" />
+    <title>Apex Voice is offline</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        padding: 0 1.5rem;
+        text-align: center;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        color: #f4f2ff;
+        background: radial-gradient(60% 40% at 20% 10%, rgb(124 58 237 / 0.45), transparent 70%), #07060f;
+      }
+      .mark {
+        display: flex;
+        width: 4.5rem;
+        height: 4.5rem;
+        align-items: center;
+        justify-content: center;
+        border-radius: 1.25rem;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6 55%, #d946ef);
+        box-shadow: 0 20px 50px -14px rgb(139 92 246 / 0.8);
+      }
+      h1 {
+        margin: 0.5rem 0 0;
+        font-size: 1.75rem;
+        letter-spacing: -0.02em;
+      }
+      p {
+        max-width: 22rem;
+        margin: 0;
+        color: #a5a1c7;
+        line-height: 1.5;
+      }
+      button {
+        margin-top: 0.5rem;
+        padding: 0.8rem 1.6rem;
+        border: 0;
+        border-radius: 0.9rem;
+        font: inherit;
+        font-weight: 650;
+        color: #fff;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6 55%, #d946ef);
+        box-shadow: 0 12px 30px -10px rgb(139 92 246 / 0.9);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="mark" aria-hidden="true">
+      <svg viewBox="0 0 512 512" width="48" height="48" fill="none" stroke="#fff" stroke-width="28" stroke-linecap="round">
+        <rect x="200" y="96" width="112" height="204" rx="56" fill="#fff" stroke="none" />
+        <path d="M148 252a108 108 0 0 0 216 0M256 360v56M200 416h112" />
+      </svg>
+    </div>
+    <h1>You're offline</h1>
+    <p>Apex Voice needs the internet to listen, write and talk back. Check your connection, then try again.</p>
+    <button type="button" onclick="window.location.href = 'https://apex-voice-app.netlify.app/'">Try again</button>
+  </body>
+</html>

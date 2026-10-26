@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Apex Voice</string>
+    <string name="title_activity_main">Apex Voice</string>
+    <string name="package_name">com.brandigail.apexvoice</string>
+    <string name="custom_url_scheme">com.brandigail.apexvoice</string>
+</resources>

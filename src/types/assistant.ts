@@ -25,5 +25,9 @@ export interface AssistantResponse {
   actions: AssistantAction[]
 }
 
+/** The voices Groq's Orpheus model offers. */
+export const ASSISTANT_VOICES = ['hannah', 'diana', 'autumn', 'austin', 'daniel', 'troy'] as const
+export type AssistantVoice = (typeof ASSISTANT_VOICES)[number]
+
 /** Most characters of text one speech request may carry (Groq's Orpheus model limit). */
 export const MAX_SPEECH_CHARS = 200
