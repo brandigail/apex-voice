@@ -32,7 +32,7 @@ export function AuthScreen() {
         ? await authClient.signUp.email({ name: name.trim(), email: email.trim(), password })
         : await authClient.signIn.email({ email: email.trim(), password })
       // On success the session hook updates and App swaps this screen for the app.
-      if (authError) setError(authError.message ?? 'Something went wrong. Please try again.')
+      if (authError) setError(signingUp && authError.status === 400 && /sign.?up/i.test(authError.message ?? '') ? 'New accounts are closed right now. Ask the owner to add you.' : (authError.message ?? 'Something went wrong. Please try again.'))
     } catch {
       setError('Network error. Check your connection and try again.')
     } finally {

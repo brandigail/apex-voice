@@ -12,6 +12,8 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 8,
+    // Sign-up is closed unless ALLOW_SIGNUP=true, so strangers cannot make accounts and use the AI quota.
+    disableSignUp: process.env.ALLOW_SIGNUP !== 'true',
   },
   // Serverless instances don't share memory, so rate-limit counters live in the database (db/004_usage_limits.sql).
   rateLimit: {
