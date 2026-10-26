@@ -1,19 +1,16 @@
 import { useRef, useState } from 'react'
 import { Volume2 } from 'lucide-react'
-import type { AssistantVoice } from '../../types/assistant'
 import { SpokenLanguageSelect } from '../language/LanguageSelect'
 import { SpeechPlayer } from './speech'
-import { VOICE_OPTIONS, readStoredVoice, writeStoredVoice } from './voice'
-
-const SAMPLE = "Hi, I'm Apex. This is how I'll sound when we talk."
+import { VOICE_OPTIONS, readStoredVoice, writeStoredVoice, type VoiceChoice } from './voice'
 
 /** Lets the user choose how Apex sounds and hear it before starting a conversation. */
 export function VoicePicker() {
-  const [voice, setVoice] = useState<AssistantVoice>(readStoredVoice)
+  const [voice, setVoice] = useState<VoiceChoice>(readStoredVoice)
   const [playing, setPlaying] = useState(false)
   const playerRef = useRef<SpeechPlayer | null>(null)
 
-  const choose = (next: AssistantVoice) => {
+  const choose = (next: VoiceChoice) => {
     writeStoredVoice(next)
     setVoice(next)
   }
@@ -24,7 +21,7 @@ export function VoicePicker() {
     player.unlock()
     setPlaying(true)
     try {
-      await player.speak(SAMPLE)
+      await player.playSample()
     } finally {
       setPlaying(false)
     }
@@ -38,7 +35,7 @@ export function VoicePicker() {
         <label htmlFor="assistant-voice" className="mb-1.5 block text-sm font-semibold">
           Apex's voice
         </label>
-        <select id="assistant-voice" value={voice} onChange={(e) => choose(e.target.value as AssistantVoice)} className="field">
+        <select id="assistant-voice" value={voice} onChange={(e) => choose(e.target.value as VoiceChoice)} className="field">
           {VOICE_OPTIONS.map((option) => (
             <option key={option.id} value={option.id}>
               {option.label}

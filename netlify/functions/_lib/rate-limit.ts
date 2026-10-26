@@ -2,7 +2,7 @@ import { neon } from '@neondatabase/serverless'
 import { errorResponse } from './http.ts'
 import { describeError } from './safe-log.ts'
 
-export type MeteredEndpoint = 'transcribe' | 'generate' | 'assistant' | 'listen' | 'speak' | 'calendar' | 'feedback'
+export type MeteredEndpoint = 'transcribe' | 'generate' | 'assistant' | 'listen' | 'speak' | 'calendar' | 'feedback' | 'export'
 
 export interface QuotaLimits {
   /** Calls one user may make in any rolling minute. */
@@ -40,6 +40,8 @@ export function limitsFor(endpoint: MeteredEndpoint): QuotaLimits {
       return { perMinute: 6, perDay: positiveInt(process.env.ASSISTANT_DAILY_LIMIT, 40), globalPerDay: 300 }
     case 'listen':
       return { perMinute: 12, perDay: 80, globalPerDay: 500 }
+    case 'export':
+      return { perMinute: 2, perDay: 10, globalPerDay: 200 }
     case 'feedback':
       return { perMinute: 5, perDay: 30, globalPerDay: 500 }
     case 'calendar':
@@ -111,6 +113,7 @@ const NOUN: Record<MeteredEndpoint, string> = {
   speak: 'spoken replies',
   calendar: 'calendar checks',
   feedback: 'feedback notes',
+  export: 'data downloads',
 }
 
 function denial(counts: UsageCounts, limits: QuotaLimits, endpoint: MeteredEndpoint): Response {

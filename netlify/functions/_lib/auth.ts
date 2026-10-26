@@ -1,5 +1,6 @@
 import { Pool } from '@neondatabase/serverless'
 import { betterAuth } from 'better-auth'
+import { sealCalendarLink } from './calendar-secret.ts'
 
 /** Netlify sets `URL` to the deployed site; BETTER_AUTH_URL overrides it (and is needed for local dev). */
 const baseURL = process.env.BETTER_AUTH_URL ?? process.env.URL
@@ -28,7 +29,15 @@ export const auth = betterAuth({
     ipAddress: { ipAddressHeaders: ['x-nf-client-connection-ip', 'x-forwarded-for'] },
   },
   // Profile fields live on the user row (see db/003_user_profile.sql) and are editable via updateUser.
+  // The calendar link works like a password to the whole calendar, so it is encrypted before it is saved (see crypto.ts).
+  databaseHooks: {
+    user: {
+      create: { before: async (user) => ({ data: sealCalendarLink(user) }) },
+      update: { before: async (user) => ({ data: sealCalendarLink(user) }) },
+    },
+  },
   user: {
+    deleteUser: { enabled: true },
     additionalFields: {
       businessName: { type: 'string', required: false },
       role: { type: 'string', required: false },

@@ -6,6 +6,8 @@ import { LANGUAGES, languageName } from '../../../src/types/languages.ts'
 import type { Profile } from '../../../src/types/profile.ts'
 import { buildSignature } from '../../../src/lib/profile.ts'
 import { addAgendaItem, listAgenda } from './agenda.ts'
+import { openText } from './crypto.ts'
+import { encryptDraftText } from './draft-store.ts'
 import { writeDraft } from './draft-generator.ts'
 import type { ToolDefinition } from './groq-chat.ts'
 import { addDays, formatWhen, startOfZonedDay, todayIn, zonedToDate } from './time.ts'
@@ -29,6 +31,8 @@ export interface ToolContext {
 const MAX_RANGE_DAYS = 31
 const DEFAULT_MEETING_MINUTES = 60
 const DRAFT_SEARCH_LIMIT = 8
+/** Drafts are stored encrypted, so the database cannot search their text. The newest ones are opened and searched here instead. */
+const DRAFT_SEARCH_WINDOW = 300
 const PREVIEW_CHARS = 140
 
 const CATEGORY_ENUM = [...DRAFT_CATEGORIES]
@@ -182,6 +186,16 @@ function label(row: Pick<DraftRow, 'category' | 'recipient' | 'subject'>): strin
   return row.recipient ? `${kind} for ${row.recipient}` : row.subject ? `${kind} "${row.subject}"` : kind
 }
 
+/** The text columns of a draft row, opened for this user. */
+function open<T extends Partial<Pick<DraftRow, 'recipient' | 'subject' | 'body'>>>(userId: string, row: T): T {
+  return {
+    ...row,
+    ...(row.recipient !== undefined && { recipient: openText(userId, 'drafts.recipient', row.recipient) }),
+    ...(row.subject !== undefined && { subject: openText(userId, 'drafts.subject', row.subject) }),
+    ...(row.body !== undefined && { body: openText(userId, 'drafts.body', row.body) }),
+  }
+}
+
 async function getAgenda(args: unknown, ctx: ToolContext): Promise<string> {
   const parsed = getAgendaArgs.safeParse(args)
   const from = parsed.success ? startOfZonedDay(parsed.data.from_date, ctx.timeZone) : null
@@ -230,15 +244,19 @@ async function findDrafts(args: unknown, ctx: ToolContext): Promise<string> {
   if (!parsed.success) return fail('Those search details were not valid.')
   const { query, category, status = 'any' } = parsed.data
   const sql = neon(process.env.DATABASE_URL ?? '')
-  const rows = (await sql.query(
+  const stored = (await sql.query(
     `SELECT id, category, recipient, subject, body, created_at, sent_at, send_at, language FROM drafts
      WHERE user_id = $1
        AND ($2::text IS NULL OR category = $2)
-       AND ($3::text IS NULL OR recipient ILIKE '%' || $3 || '%' OR subject ILIKE '%' || $3 || '%' OR body ILIKE '%' || $3 || '%')
-       AND ($4 = 'any' OR ($4 = 'sent' AND sent_at IS NOT NULL) OR ($4 = 'unsent' AND sent_at IS NULL))
-     ORDER BY created_at DESC LIMIT ${DRAFT_SEARCH_LIMIT}`,
-    [ctx.userId, category ?? null, query ? query.replace(/[%_\\]/g, '\\$&') : null, status],
+       AND ($3 = 'any' OR ($3 = 'sent' AND sent_at IS NOT NULL) OR ($3 = 'unsent' AND sent_at IS NULL))
+     ORDER BY created_at DESC LIMIT ${DRAFT_SEARCH_WINDOW}`,
+    [ctx.userId, category ?? null, status],
   )) as DraftRow[]
+  const needle = query?.toLowerCase()
+  const rows = stored
+    .map((row) => open(ctx.userId, row))
+    .filter((row) => !needle || [row.recipient, row.subject, row.body].some((text) => text.toLowerCase().includes(needle)))
+    .slice(0, DRAFT_SEARCH_LIMIT)
 
   return JSON.stringify({
     drafts: rows.map((row) => ({
@@ -259,11 +277,12 @@ async function getDraft(args: unknown, ctx: ToolContext): Promise<string> {
   const parsed = idArgs.safeParse(args)
   if (!parsed.success) return fail('Give the draft id.')
   const sql = neon(process.env.DATABASE_URL ?? '')
-  const [row] = (await sql.query(
+  const [stored] = (await sql.query(
     'SELECT id, category, recipient, subject, body, created_at, sent_at, language FROM drafts WHERE id = $1 AND user_id = $2',
     [parsed.data.id, ctx.userId],
   )) as DraftRow[]
-  if (!row) return fail('That draft was not found.')
+  if (!stored) return fail('That draft was not found.')
+  const row = open(ctx.userId, stored)
   // The signature is for the page, not for a voice to read out.
   const signature = buildSignature(ctx.profile)
   const body = signature && row.body.endsWith(signature) ? row.body.slice(0, -signature.length).trimEnd() : row.body
@@ -293,10 +312,11 @@ async function createDraft(args: unknown, ctx: ToolContext): Promise<string> {
   const sql = neon(process.env.DATABASE_URL ?? '')
   const [{ total }] = (await sql.query('SELECT count(*)::int AS total FROM drafts WHERE user_id = $1', [ctx.userId])) as { total: number }[]
   if (total >= 500) return fail('The user already has 500 drafts, so nothing was saved. Ask them to delete some.')
+  const text = encryptDraftText(ctx.userId, { recipient: draft.recipient, subject: draft.subject, body: draft.body, transcript: instruction })
   const [saved] = (await sql.query(
     `INSERT INTO drafts (user_id, category, recipient, subject, body, transcript, language)
      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-    [ctx.userId, draft.category, draft.recipient, draft.subject, draft.body, instruction, draft.language],
+    [ctx.userId, draft.category, text.recipient, text.subject, text.body, text.transcript, draft.language],
   )) as { id: string }[]
 
   ctx.actions.push({ type: 'draft_created', id: saved.id, category: draft.category, label: label(draft) })
@@ -327,7 +347,7 @@ async function scheduleSend(args: unknown, ctx: ToolContext): Promise<string> {
   if (!row) return fail('That draft was not found.')
   if (!at) return JSON.stringify({ cleared: true })
   const when = formatWhen(at.toISOString(), ctx.timeZone, false)
-  ctx.actions.push({ type: 'send_scheduled', id: row.id, label: `${label(row)} at ${when}` })
+  ctx.actions.push({ type: 'send_scheduled', id: row.id, label: `${label(open(ctx.userId, row))} at ${when}` })
   return JSON.stringify({ planned: true, when })
 }
 
@@ -341,7 +361,7 @@ async function markSent(args: unknown, ctx: ToolContext): Promise<string> {
     [parsed.data.id, ctx.userId, parsed.data.sent],
   )) as Pick<DraftRow, 'id' | 'category' | 'recipient' | 'subject'>[]
   if (!row) return fail('That draft was not found.')
-  if (parsed.data.sent) ctx.actions.push({ type: 'marked_sent', id: row.id, label: label(row) })
+  if (parsed.data.sent) ctx.actions.push({ type: 'marked_sent', id: row.id, label: label(open(ctx.userId, row)) })
   return JSON.stringify({ updated: true, sent: parsed.data.sent })
 }
 

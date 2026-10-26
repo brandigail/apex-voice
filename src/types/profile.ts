@@ -16,7 +16,8 @@ export const PROFILE_LIMITS = {
   role: 80,
   phone: 40,
   signature: 500,
-  calendarUrl: 500,
+  /** Room for a 500 character link after encryption (about 40% longer). */
+  calendarUrl: 900,
 } as const satisfies Record<keyof Profile, number>
 
 /** The user fields Better Auth stores; extra profile columns are null until the user fills them in. */

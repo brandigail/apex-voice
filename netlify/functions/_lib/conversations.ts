@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless'
 import type { AssistantAction } from '../../../src/types/assistant.ts'
 import type { Conversation, ConversationMessage } from '../../../src/types/conversation.ts'
+import { decryptJson, encryptJson, encryptText, openText } from './crypto.ts'
 import { describeError } from './safe-log.ts'
 
 /** Most messages kept per user; the oldest are dropped so the history can't grow without limit. */
@@ -23,13 +24,13 @@ export async function rememberTurn(
       `INSERT INTO assistant_messages (user_id, conversation_id, role, content, created_at)
        VALUES ($1, $2, 'user', $3, now() - interval '1 second'),
               ($1, $2, 'assistant', $4, now())`,
-      [userId, conversationId, userText, reply],
+      [userId, conversationId, encryptText(userId, 'assistant_messages.content', userText), encryptText(userId, 'assistant_messages.content', reply)],
     )
     if (actions.length > 0) {
       await sql.query(
         `UPDATE assistant_messages SET actions = $3::jsonb
          WHERE id = (SELECT max(id) FROM assistant_messages WHERE user_id = $1 AND conversation_id = $2 AND role = 'assistant')`,
-        [userId, conversationId, JSON.stringify(actions)],
+        [userId, conversationId, JSON.stringify(encryptJson(userId, 'assistant_messages.actions', actions))],
       )
     }
     if (Math.random() < 1 / PRUNE_ONE_IN) {
@@ -65,8 +66,8 @@ export async function listConversations(userId: string): Promise<Conversation[]>
   for (const row of rows.reverse()) {
     const message: ConversationMessage = {
       role: row.role,
-      content: row.content,
-      actions: row.actions,
+      content: openText(userId, 'assistant_messages.content', row.content),
+      actions: decryptJson<AssistantAction[]>(userId, 'assistant_messages.actions', row.actions, []),
       createdAt: new Date(row.created_at).toISOString(),
     }
     byConversation.set(row.conversation_id, [...(byConversation.get(row.conversation_id) ?? []), message])

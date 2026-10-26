@@ -1,6 +1,7 @@
 import { profileFromUser } from '../../../src/lib/profile.ts'
 import type { Profile } from '../../../src/types/profile.ts'
 import { auth } from './auth.ts'
+import { openCalendarLink } from './calendar-secret.ts'
 import { errorResponse } from './http.ts'
 import { describeError } from './safe-log.ts'
 
@@ -18,7 +19,9 @@ export async function requireUser(req: Request): Promise<UserResult> {
     const session = await auth.api.getSession({ headers: req.headers })
     if (session) {
       const { id, email } = session.user
-      return { ok: true, user: { id, email, profile: profileFromUser(session.user) } }
+      const profile = profileFromUser(session.user)
+      // The saved calendar link is encrypted; servers use the opened copy, and the browser only ever sees the sealed one.
+      return { ok: true, user: { id, email, profile: { ...profile, calendarUrl: openCalendarLink(profile.calendarUrl) } } }
     }
   } catch (err) {
     console.error('Session lookup failed:', describeError(err))

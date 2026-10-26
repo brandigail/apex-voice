@@ -46,7 +46,7 @@ export interface UseAssistant {
   clear: () => void
 }
 
-export function useAssistant(firstName: string): UseAssistant {
+export function useAssistant(): UseAssistant {
   const [phase, setPhase] = useState<AssistantPhase>('idle')
   const [lines, setLines] = useState<ChatLine[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -183,11 +183,13 @@ export function useAssistant(firstName: string): UseAssistant {
     // In the Android app this keeps the microphone alive with the screen off; in a browser it does nothing.
     void startBackgroundListening()
 
-    const greeting = firstName ? `Hi ${firstName}, I'm listening. What can I do for you?` : "Hi, I'm listening. What can I do for you?"
+    // A fixed line, so a recording of it plays at once instead of waiting for the voice service.
+    const greeting = "Hi, I'm listening. What can I do for you?"
     addLine('assistant', greeting)
-    await speakReply(session, greeting)
+    setPhase('speaking')
+    await session.player.speakGreeting(greeting)
     listenAgain(session)
-  }, [addLine, end, firstName, handleUtterance, listenAgain, speakReply])
+  }, [addLine, end, handleUtterance, listenAgain])
 
   const tapOrb = useCallback(() => {
     const session = sessionRef.current

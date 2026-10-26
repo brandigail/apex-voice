@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import { AlertCircle, BellRing, CalendarPlus, CheckCheck, FilePenLine, Sparkles, Square, Trash2 } from 'lucide-react'
 import type { Tab } from '../../components/TabBar'
+import { warmUp } from '../../lib/assistant-api'
 import type { AssistantAction } from '../../types/assistant'
 import { AssistantOrb } from './AssistantOrb'
 import { VoicePicker } from './VoicePicker'
@@ -23,7 +25,6 @@ const SUGGESTIONS = [
 ]
 
 interface AssistantViewProps {
-  firstName: string
   onNavigate: (tab: Tab) => void
 }
 
@@ -49,8 +50,12 @@ function ActionChip({ action, onNavigate }: { action: AssistantAction; onNavigat
   )
 }
 
-export function AssistantView({ firstName, onNavigate }: AssistantViewProps) {
-  const { phase, lines, error, orbRef, tapOrb, end, clear } = useAssistant(firstName)
+export function AssistantView({ onNavigate }: AssistantViewProps) {
+  const { phase, lines, error, orbRef, tapOrb, end, clear } = useAssistant()
+  // The voice and listening services start cold; waking them now means they are ready when the user taps the orb.
+  useEffect(() => {
+    warmUp()
+  }, [])
   const active = phase !== 'idle'
 
   return (

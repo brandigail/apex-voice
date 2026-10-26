@@ -4,6 +4,7 @@ import { z } from 'zod'
 import type { ListDraftsResponse, SaveDraftResponse } from '../../src/types/api.ts'
 import { draftStatusSchema, saveDraftSchema } from '../../src/types/draft-schema.ts'
 import type { Draft, DraftCategory } from '../../src/types/draft.ts'
+import { decryptDraftRow, encryptDraftText } from './_lib/draft-store.ts'
 import { errorResponse, json } from './_lib/http.ts'
 import { requireUser } from './_lib/session.ts'
 import { describeError } from './_lib/safe-log.ts'
@@ -28,7 +29,9 @@ interface DraftRow {
 
 const COLUMNS = 'id, category, recipient, subject, body, transcript, created_at, updated_at, sent_at, send_at, language'
 
-function toDraft(row: DraftRow): Draft {
+/** Turns a database row into a draft, opening the encrypted text columns. */
+function toDraft(userId: string, stored: DraftRow): Draft {
+  const row = decryptDraftRow(userId, stored)
   return {
     id: row.id,
     category: row.category,
@@ -67,7 +70,7 @@ export default async function handler(req: Request): Promise<Response> {
         `SELECT ${COLUMNS} FROM drafts WHERE user_id = $1 ORDER BY created_at DESC LIMIT ${LIST_LIMIT}`,
         [userId],
       )) as DraftRow[]
-      return json<ListDraftsResponse>({ drafts: rows.map(toDraft) })
+      return json<ListDraftsResponse>({ drafts: rows.map((row) => toDraft(userId, row)) })
     }
 
     if (id !== null && !z.uuid().safeParse(id).success) return errorResponse(400, 'Invalid draft id.')
@@ -97,6 +100,7 @@ async function upsert(req: Request, sql: NeonQueryFunction<false, false>, userId
   const parsed = saveDraftSchema.safeParse(body)
   if (!parsed.success || parsed.data.id !== id) return errorResponse(400, 'That draft is not valid.')
   const draft = parsed.data
+  const text = encryptDraftText(userId, draft)
 
   const [counts] = (await sql.query(
     'SELECT count(*)::int AS total, (count(*) FILTER (WHERE id = $2))::int AS existing FROM drafts WHERE user_id = $1',
@@ -115,10 +119,10 @@ async function upsert(req: Request, sql: NeonQueryFunction<false, false>, userId
        body = EXCLUDED.body, transcript = EXCLUDED.transcript, language = EXCLUDED.language, updated_at = now()
      WHERE drafts.user_id = EXCLUDED.user_id
      RETURNING ${COLUMNS}`,
-    [id, userId, draft.category, draft.recipient, draft.subject, draft.body, draft.transcript, draft.createdAt, draft.language],
+    [id, userId, draft.category, text.recipient, text.subject, text.body, text.transcript, draft.createdAt, draft.language],
   )) as DraftRow[]
 
-  return rows.length > 0 ? json<SaveDraftResponse>({ draft: toDraft(rows[0]) }) : errorResponse(404, 'Draft not found.')
+  return rows.length > 0 ? json<SaveDraftResponse>({ draft: toDraft(userId, rows[0]) }) : errorResponse(404, 'Draft not found.')
 }
 
 export const config: Config = { path: ['/api/drafts', '/api/drafts/*'] }
@@ -136,5 +140,5 @@ async function updateStatus(req: Request, sql: NeonQueryFunction<false, false>, 
      WHERE id = $1 AND user_id = $2 RETURNING ${COLUMNS}`,
     [id, userId, sent ?? null, sendAt !== undefined, sendAt ?? null],
   )) as DraftRow[]
-  return rows.length > 0 ? json<SaveDraftResponse>({ draft: toDraft(rows[0]) }) : errorResponse(404, 'Draft not found.')
+  return rows.length > 0 ? json<SaveDraftResponse>({ draft: toDraft(userId, rows[0]) }) : errorResponse(404, 'Draft not found.')
 }

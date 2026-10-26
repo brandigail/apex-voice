@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { buildSignature, profileFromUser } from '../../lib/profile'
 import { SubscriptionSection } from '../subscription/SubscriptionSection'
 import { FeedbackForm } from '../tour/FeedbackForm'
+import { AccountData } from './AccountData'
 import { CalendarConnect } from './CalendarConnect'
 import { authClient } from '../../lib/auth-client'
 import { PROFILE_LIMITS, type Profile, type ProfileSource } from '../../types/profile'
@@ -201,6 +202,8 @@ export function ProfileView({ user, showSubscriptions }: ProfileViewProps) {
         <p className="muted mt-1 mb-4 text-sm">What is easy, what is slow, what is missing? Anything helps.</p>
         <FeedbackForm screen="profile" id="profile-feedback" />
       </section>
+
+      <AccountData />
     </section>
   )
 }

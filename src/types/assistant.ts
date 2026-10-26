@@ -36,5 +36,8 @@ export interface AssistantResponse {
 export const ASSISTANT_VOICES = ['hannah', 'diana', 'autumn', 'austin', 'daniel', 'troy'] as const
 export type AssistantVoice = (typeof ASSISTANT_VOICES)[number]
 
+/** What the assistant always asks after writing a draft. The server guarantees the wording; the app plays a recorded clip for it. */
+export const READ_BACK_QUESTION = 'Would you like me to read you back your draft?'
+
 /** Most characters of text one speech request may carry (Groq's Orpheus model limit). */
 export const MAX_SPEECH_CHARS = 200

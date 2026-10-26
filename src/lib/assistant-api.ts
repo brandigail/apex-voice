@@ -36,6 +36,14 @@ export async function askAssistant(
   return data.data as AssistantResponse
 }
 
+/**
+ * Server functions start cold the first time they are used after a quiet spell, which adds a second or two. A harmless
+ * request to each one (they answer "wrong method" straight away) wakes them before the user needs them.
+ */
+export function warmUp(): void {
+  for (const path of ['/api/speak', '/api/assistant', '/api/transcribe']) void fetch(path, { method: 'GET' }).catch(() => undefined)
+}
+
 /** Fetches one short piece of text (up to {@link MAX_SPEECH_CHARS} characters) as a spoken audio clip. */
 export async function fetchSpeech(text: string, voice: AssistantVoice): Promise<Blob> {
   let response: Response

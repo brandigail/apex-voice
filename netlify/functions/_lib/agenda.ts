@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless'
 import type { AgendaItem, AgendaResponse, NewAgendaItem } from '../../../src/types/agenda.ts'
 import { readCalendar } from './calendar.ts'
+import { encryptText, openText } from './crypto.ts'
 
 /** Most things one user can keep on their own agenda. */
 export const MAX_AGENDA_ITEMS = 500
@@ -13,13 +14,13 @@ interface AgendaRow {
   notes: string
 }
 
-function toItem(row: AgendaRow): AgendaItem {
+function toItem(userId: string, row: AgendaRow): AgendaItem {
   return {
     id: row.id,
-    title: row.title,
+    title: openText(userId, 'agenda_items.title', row.title),
     startsAt: new Date(row.starts_at).toISOString(),
     endsAt: row.ends_at ? new Date(row.ends_at).toISOString() : null,
-    notes: row.notes,
+    notes: openText(userId, 'agenda_items.notes', row.notes),
     allDay: false,
     source: 'apex',
   }
@@ -38,9 +39,11 @@ interface DueDraftRow {
 const KIND_WORD: Record<string, string> = { EMAIL: 'email', QUOTE: 'quote', WHATSAPP: 'WhatsApp', SMS: 'text', NOTE: 'note' }
 
 /** Unsent drafts with a planned send time, including ones that are overdue, shown as things to do. */
-function dueDraftItem(row: DueDraftRow): AgendaItem {
+function dueDraftItem(userId: string, row: DueDraftRow): AgendaItem {
   const kind = KIND_WORD[row.category] ?? `${row.category.toLowerCase()} post`
-  const title = row.recipient ? `Send ${kind} to ${row.recipient}` : `Send ${kind}${row.subject ? `: ${row.subject}` : ''}`
+  const recipient = openText(userId, 'drafts.recipient', row.recipient)
+  const subject = openText(userId, 'drafts.subject', row.subject)
+  const title = recipient ? `Send ${kind} to ${recipient}` : `Send ${kind}${subject ? `: ${subject}` : ''}`
   return {
     id: `draft-${row.id}`,
     title,
@@ -71,7 +74,7 @@ export async function listAgenda(userId: string, calendarUrl: string, from: Date
     calendarUrl ? readCalendar(calendarUrl, from, to) : Promise.resolve(null),
   ])
 
-  const items = [...rows.map(toItem), ...dueDrafts.map(dueDraftItem)]
+  const items = [...rows.map((row) => toItem(userId, row)), ...dueDrafts.map((row) => dueDraftItem(userId, row))]
   if (calendar?.ok) items.push(...calendar.items)
   return {
     items: items.sort(byStart),
@@ -92,9 +95,9 @@ export async function addAgendaItem(userId: string, input: NewAgendaItem): Promi
   const rows = (await sql.query(
     `INSERT INTO agenda_items (user_id, title, starts_at, ends_at, notes) VALUES ($1, $2, $3, $4, $5)
      RETURNING id, title, starts_at, ends_at, notes`,
-    [userId, input.title, input.startsAt, input.endsAt, input.notes],
+    [userId, encryptText(userId, 'agenda_items.title', input.title), input.startsAt, input.endsAt, encryptText(userId, 'agenda_items.notes', input.notes)],
   )) as AgendaRow[]
-  return { ok: true, item: toItem(rows[0]) }
+  return { ok: true, item: toItem(userId, rows[0]) }
 }
 
 export async function deleteAgendaItem(userId: string, id: string): Promise<boolean> {

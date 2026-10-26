@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { AssistantAction, AssistantResponse } from '../../src/types/assistant.ts'
+import { READ_BACK_QUESTION, type AssistantAction, type AssistantResponse } from '../../src/types/assistant.ts'
 import { runTool, TOOLS, type ToolContext } from './_lib/assistant-tools.ts'
 import { assistantSystemPrompt } from './_lib/assistant-prompt.ts'
 import { chat, type ChatMessage } from './_lib/groq-chat.ts'
@@ -51,7 +51,6 @@ function spoken(text: string): string {
   return text.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
 }
 
-const READ_BACK_QUESTION = 'Would you like me to read you back your draft?'
 
 /** After writing a draft the assistant always offers to read it back, in these exact words, whatever the model chose to say. */
 function withReadBackQuestion(reply: string, actions: AssistantAction[]): string {

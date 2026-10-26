@@ -63,7 +63,7 @@ export default function App() {
       ) : tab === 'record' ? (
         <RecordView />
       ) : tab === 'assistant' ? (
-        <AssistantView firstName={session.user.name.trim().split(/\s+/)[0] ?? ''} onNavigate={setTab} />
+        <AssistantView onNavigate={setTab} />
       ) : tab === 'agenda' ? (
         <AgendaView onNavigate={setTab} />
       ) : tab === 'history' ? (
