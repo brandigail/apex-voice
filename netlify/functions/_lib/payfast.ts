@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { describeError } from './safe-log.ts'
 
 /** PayFast's public sandbox merchant. Anyone can use it to test; no real money moves and nothing needs signing up for. */
 const SANDBOX_MERCHANT_ID = '10000100'
@@ -95,7 +96,7 @@ export async function payfastConfirmsItn(entries: readonly (readonly [string, st
     })
     return (await response.text()).trim() === 'VALID'
   } catch (err) {
-    console.error('PayFast validation request failed:', err instanceof Error ? err.message : err)
+    console.error('PayFast validation request failed:', describeError(err))
     return false
   }
 }

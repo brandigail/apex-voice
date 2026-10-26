@@ -1,5 +1,6 @@
 import { CURRENCIES } from '../../../src/types/plans.ts'
 import type { RatesResponse } from '../../../src/types/plans.ts'
+import { describeError } from './safe-log.ts'
 
 const CACHE_MS = 60 * 60 * 1000
 const FETCH_TIMEOUT_MS = 5_000
@@ -65,7 +66,7 @@ export async function getRates(): Promise<RatesResponse | null> {
         return value
       }
     } catch (err) {
-      console.error('Exchange rate source failed:', err instanceof Error ? err.message : err)
+      console.error('Exchange rate source failed:', describeError(err))
     }
   }
   return cached?.value ?? null

@@ -4,6 +4,7 @@ import type { ConversationsResponse } from '../../src/types/conversation.ts'
 import { deleteConversation, listConversations } from './_lib/conversations.ts'
 import { errorResponse, json } from './_lib/http.ts'
 import { requireUser } from './_lib/session.ts'
+import { describeError } from './_lib/safe-log.ts'
 
 /** Routes are /api/conversations and /api/conversations/:id. */
 function conversationIdFrom(req: Request): string | null {
@@ -26,7 +27,7 @@ export default async function handler(req: Request): Promise<Response> {
     }
     return errorResponse(405, 'Method not allowed.')
   } catch (err) {
-    console.error('Conversation request failed:', err)
+    console.error('Conversation request failed:', describeError(err))
     return errorResponse(500, 'Could not reach your conversation history. Please try again.')
   }
 }

@@ -1,0 +1,18 @@
+# Browser security headers, applied by Netlify to the live site (see SECURITY.md, gap G2).
+# The sha256 below is the fingerprint of the one inline script in index.html (it sets dark or light mode before the page paints).
+# `npm run build` checks it still matches and fails if the script changes, so the page can never be silently broken.
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-VZcg1gjkvs4qqeCz9lagMKyP3/6Clwxwvj1Y5T7A7HY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self' blob: data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https://sandbox.payfast.co.za https://www.payfast.co.za; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: microphone=(self), camera=(), geolocation=(), payment=(), usb=(), interest-cohort=()
+
+# The service worker file must always be re-checked, or an update could be missed.
+/sw.js
+  Cache-Control: no-cache
+
+# Server answers contain personal data and must never be stored by a browser or a shared cache.
+/api/*
+  Cache-Control: no-store

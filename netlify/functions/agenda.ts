@@ -5,6 +5,7 @@ import type { AgendaResponse } from '../../src/types/agenda.ts'
 import { addAgendaItem, deleteAgendaItem, listAgenda } from './_lib/agenda.ts'
 import { errorResponse, json } from './_lib/http.ts'
 import { requireUser } from './_lib/session.ts'
+import { describeError } from './_lib/safe-log.ts'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const DEFAULT_SPAN_DAYS = 14
@@ -59,7 +60,7 @@ export default async function handler(req: Request): Promise<Response> {
 
     return errorResponse(405, 'Method not allowed.')
   } catch (err) {
-    console.error('Agenda request failed:', err)
+    console.error('Agenda request failed:', describeError(err))
     return errorResponse(500, 'Could not reach your agenda. Please try again.')
   }
 }

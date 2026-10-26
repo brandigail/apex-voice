@@ -1,5 +1,6 @@
 import { neon } from '@neondatabase/serverless'
 import { errorResponse } from './http.ts'
+import { describeError } from './safe-log.ts'
 
 export type MeteredEndpoint = 'transcribe' | 'generate' | 'assistant' | 'listen' | 'speak' | 'calendar' | 'feedback'
 
@@ -97,7 +98,7 @@ export async function claimQuota(
     const [counts] = (await sql.query(COUNTS_SQL, [userId, endpoint])) as UsageCounts[]
     return { ok: false, response: denial(counts, limits, endpoint) }
   } catch (err) {
-    console.error('Quota check failed:', err)
+    console.error('Quota check failed:', describeError(err))
     return { ok: false, response: errorResponse(503, 'Could not check your usage limit. Please try again.') }
   }
 }

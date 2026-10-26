@@ -3,6 +3,7 @@ import { ASSISTANT_VOICES, MAX_SPEECH_CHARS } from '../../src/types/assistant.ts
 import { errorResponse } from './_lib/http.ts'
 import { claimQuota } from './_lib/rate-limit.ts'
 import { requireUser } from './_lib/session.ts'
+import { describeError, describeUpstream } from './_lib/safe-log.ts'
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/audio/speech'
 const GROQ_MODEL = 'canopylabs/orpheus-v1-english'
@@ -49,12 +50,12 @@ export default async function handler(req: Request): Promise<Response> {
     })
   } catch (err) {
     const timedOut = err instanceof DOMException && err.name === 'TimeoutError'
-    console.error('Groq speech request failed:', timedOut ? 'timeout' : err)
+    console.error('Groq speech request failed:', timedOut ? 'timeout' : describeError(err))
     return errorResponse(timedOut ? 504 : 502, 'The voice service is unavailable.')
   }
 
   if (!response.ok) {
-    console.error('Groq speech error:', response.status, await response.text().catch(() => ''))
+    console.error('Groq speech error:', await describeUpstream(response))
     return errorResponse(response.status === 429 ? 429 : 502, 'The voice service is unavailable.')
   }
 

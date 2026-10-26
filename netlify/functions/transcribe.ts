@@ -5,6 +5,7 @@ import { transcriptionPrompt } from './_lib/draft-prompt.ts'
 import { errorResponse, json } from './_lib/http.ts'
 import { claimQuota } from './_lib/rate-limit.ts'
 import { requireUser } from './_lib/session.ts'
+import { describeError, describeUpstream } from './_lib/safe-log.ts'
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/audio/transcriptions'
 /** Fast, and accurate for English. */
@@ -73,12 +74,12 @@ export default async function handler(req: Request): Promise<Response> {
     })
   } catch (err) {
     const timedOut = err instanceof DOMException && err.name === 'TimeoutError'
-    console.error('Groq request failed:', timedOut ? 'timeout' : err)
+    console.error('Groq request failed:', timedOut ? 'timeout' : describeError(err))
     return errorResponse(timedOut ? 504 : 502, 'Transcription service is unavailable. Please try again.')
   }
 
   if (!response.ok) {
-    console.error('Groq transcription error:', response.status, await response.text().catch(() => ''))
+    console.error('Groq transcription error:', await describeUpstream(response))
     if (response.status === 429) return errorResponse(429, 'Transcription is busy. Try again in a moment.')
     return errorResponse(502, 'Transcription failed. Please try again.')
   }

@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless'
 import type { AssistantAction } from '../../../src/types/assistant.ts'
 import type { Conversation, ConversationMessage } from '../../../src/types/conversation.ts'
+import { describeError } from './safe-log.ts'
 
 /** Most messages kept per user; the oldest are dropped so the history can't grow without limit. */
 const MAX_MESSAGES_PER_USER = 1000
@@ -39,7 +40,7 @@ export async function rememberTurn(
       )
     }
   } catch (err) {
-    console.error('Could not save the conversation turn:', err)
+    console.error('Could not save the conversation turn:', describeError(err))
   }
 }
 

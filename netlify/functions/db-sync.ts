@@ -6,6 +6,7 @@ import { draftStatusSchema, saveDraftSchema } from '../../src/types/draft-schema
 import type { Draft, DraftCategory } from '../../src/types/draft.ts'
 import { errorResponse, json } from './_lib/http.ts'
 import { requireUser } from './_lib/session.ts'
+import { describeError } from './_lib/safe-log.ts'
 
 /** Most drafts one user can keep; stops a client from filling the database with made-up ids. */
 const MAX_DRAFTS_PER_USER = 500
@@ -81,7 +82,7 @@ export default async function handler(req: Request): Promise<Response> {
 
     return errorResponse(405, 'Method not allowed.')
   } catch (err) {
-    console.error('Draft sync failed:', err)
+    console.error('Draft sync failed:', describeError(err))
     return errorResponse(500, 'Could not reach your saved drafts. Please try again.')
   }
 }

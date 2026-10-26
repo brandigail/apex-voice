@@ -1,3 +1,4 @@
+import { describeError, describeUpstream } from './safe-log.ts'
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 const DEFAULT_MODEL = 'qwen/qwen3.8-27b'
 
@@ -57,14 +58,14 @@ export async function chat(
       signal: AbortSignal.timeout(timeoutMs),
     })
     if (!response.ok) {
-      console.error('Groq chat error:', response.status, await response.text().catch(() => ''))
+      console.error('Groq chat error:', await describeUpstream(response))
       return { ok: false, status: response.status }
     }
     const message = ((await response.json()) as GroqChatResponse).choices?.[0]?.message
     return { ok: true, content: message?.content ?? '', toolCalls: message?.tool_calls ?? [] }
   } catch (err) {
     const timedOut = err instanceof DOMException && err.name === 'TimeoutError'
-    console.error('Groq chat request failed:', timedOut ? 'timeout' : err)
+    console.error('Groq chat request failed:', timedOut ? 'timeout' : describeError(err))
     return { ok: false, status: timedOut ? 504 : 502 }
   }
 }

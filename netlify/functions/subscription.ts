@@ -8,6 +8,7 @@ import { errorResponse, json } from './_lib/http.ts'
 import { apiHeaders, payfastConfig, signedCheckoutFields } from './_lib/payfast.ts'
 import { getRates } from './_lib/rates.ts'
 import { requireUser } from './_lib/session.ts'
+import { describeError, describeUpstream } from './_lib/safe-log.ts'
 
 interface SubscriptionRow {
   plan: PlanId
@@ -69,7 +70,7 @@ export default async function handler(req: Request): Promise<Response> {
     if (req.method === 'POST' && action === 'cancel') return await cancel(sql, session.user.id, config)
     return errorResponse(405, 'Method not allowed.')
   } catch (err) {
-    console.error('Subscription request failed:', err)
+    console.error('Subscription request failed:', describeError(err))
     return errorResponse(500, 'Could not reach your subscription. Please try again.')
   }
 }
@@ -148,7 +149,7 @@ async function cancel(sql: NeonQueryFunction<false, false>, userId: string, conf
   const url = `${config.apiUrl}/subscriptions/${encodeURIComponent(row.pf_token)}/cancel${config.live ? '' : '?testing=true'}`
   const response = await fetch(url, { method: 'PUT', headers: apiHeaders(config), signal: AbortSignal.timeout(8_000) })
   if (!response.ok) {
-    console.error('PayFast cancel failed:', response.status, (await response.text().catch(() => '')).slice(0, 300))
+    console.error('PayFast cancel failed:', await describeUpstream(response))
     return errorResponse(502, 'PayFast would not cancel the subscription. Please try again.')
   }
   await sql.query("UPDATE subscriptions SET status = 'cancelled', updated_at = now() WHERE user_id = $1", [userId])

@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { errorResponse, json } from './_lib/http.ts'
 import { claimQuota } from './_lib/rate-limit.ts'
 import { requireUser } from './_lib/session.ts'
+import { describeError } from './_lib/safe-log.ts'
 
 const requestSchema = z.object({
   message: z.string().trim().min(3).max(2_000),
@@ -31,7 +32,7 @@ export default async function handler(req: Request): Promise<Response> {
     ])
     return json({ saved: true }, 201)
   } catch (err) {
-    console.error('Feedback could not be saved:', err instanceof Error ? err.message : err)
+    console.error('Feedback could not be saved:', describeError(err))
     return errorResponse(500, 'Could not save your note. Please try again.')
   }
 }

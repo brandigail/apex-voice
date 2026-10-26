@@ -1,3 +1,4 @@
+import { describeError, describeUpstream } from './safe-log.ts'
 const RESEND_URL = 'https://api.resend.com/emails'
 const DEFAULT_FROM = 'Apex Voice <onboarding@resend.dev>'
 
@@ -27,13 +28,12 @@ export async function sendEmail(email: Email): Promise<MailResult> {
       signal: AbortSignal.timeout(8_000),
     })
     if (!response.ok) {
-      const detail = await response.text().catch(() => '')
-      console.error('Resend rejected the email:', response.status, detail.slice(0, 300))
+      console.error('Resend rejected the email:', await describeUpstream(response))
       return { sent: false, reason: `The email service answered ${response.status}.` }
     }
     return { sent: true }
   } catch (err) {
-    console.error('Email request failed:', err instanceof Error ? err.message : err)
+    console.error('Email request failed:', describeError(err))
     return { sent: false, reason: 'The email service could not be reached.' }
   }
 }

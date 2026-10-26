@@ -9,6 +9,7 @@ import { addAgendaItem, listAgenda } from './agenda.ts'
 import { writeDraft } from './draft-generator.ts'
 import type { ToolDefinition } from './groq-chat.ts'
 import { addDays, formatWhen, startOfZonedDay, todayIn, zonedToDate } from './time.ts'
+import { describeError } from './safe-log.ts'
 
 export interface ToolContext {
   userId: string
@@ -372,7 +373,7 @@ export async function runTool(name: string, rawArguments: string, ctx: ToolConte
         return fail(`There is no tool called ${name}.`)
     }
   } catch (err) {
-    console.error(`Assistant tool ${name} failed:`, err)
+    console.error(`Assistant tool ${name} failed:`, describeError(err))
     return fail('That did not work. Tell the user you could not do it right now.')
   }
 }

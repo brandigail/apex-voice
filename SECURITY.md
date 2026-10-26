@@ -51,6 +51,9 @@ Neon says it encrypts customer data at rest with AES-256 and enforces TLS 1.2+ i
 
 ## 4. Known gaps (what is NOT secure yet), most serious first
 
+**Status 2026-10-26 evening:** G2 (browser headers) and G3 (content-free logs) are built and tested locally but **not live yet**, because the Netlify credits ran out and nothing can be deployed until they reset in November. They ship in the first deploy after that. The live site still has these two gaps until then.
+
+
 | # | Gap | Why it matters | Fix | Effort |
 |---|---|---|---|---|
 | G1 | Messages, transcripts and the calendar link are stored as plain text in the database | Anyone who gets the database address, or Neon or Netlify account access, can read clients' information. Disk encryption does not stop that | Encrypt the sensitive fields inside Apex before saving (AES-256-GCM, key kept only in the server's settings, one key per person) | 1 day |

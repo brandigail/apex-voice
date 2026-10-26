@@ -44,7 +44,9 @@
         color: #a5a1c7;
         line-height: 1.5;
       }
-      button {
+      .retry {
+        display: inline-block;
+        text-decoration: none;
         margin-top: 0.5rem;
         padding: 0.8rem 1.6rem;
         border: 0;
@@ -66,6 +68,6 @@
     </div>
     <h1>You're offline</h1>
     <p>Apex Voice needs the internet to listen, write and talk back. Check your connection, then try again.</p>
-    <button type="button" onclick="window.location.href = 'https://apex-voice-app.netlify.app/'">Try again</button>
+    <a class="retry" href="https://apex-voice-app.netlify.app/">Try again</a>
   </body>
 </html>
