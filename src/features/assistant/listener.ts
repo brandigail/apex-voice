@@ -28,6 +28,8 @@ export interface ListenerEvents {
   onHearing: (hearing: boolean) => void
   onUtterance: (utterance: Utterance) => void
   onIdleTimeout: () => void
+  /** The microphone was taken away, for example when an iPhone locks its screen or a call comes in. */
+  onInterrupted: () => void
   onError: (message: string) => void
 }
 
@@ -65,16 +67,20 @@ export class Listener {
     if (typeof MediaRecorder === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
       throw new Error('This browser cannot record audio. Try Chrome, Edge, Firefox or Safari.')
     }
+    // Created before the permission prompt: iOS Safari only lets audio start from the tap itself, not after an await.
+    const context = new AudioContext()
+    void context.resume().catch(() => undefined)
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       })
     } catch (err) {
+      void context.close().catch(() => undefined)
       throw new Error(toRecorderError(err).message, { cause: err })
     }
     this.mimeType = pickMimeType() ?? ''
-    this.context = new AudioContext()
-    await this.context.resume()
+    this.context = context
+    await context.resume().catch(() => undefined)
     this.analyser = this.context.createAnalyser()
     this.analyser.fftSize = 1024
     this.samples = new Uint8Array(this.analyser.fftSize)
@@ -134,8 +140,15 @@ export class Listener {
   }
 
   private tick(): void {
-    // Phones suspend audio when the screen turns off; wake it again so listening carries on.
-    if (this.context?.state === 'suspended') void this.context.resume().catch(() => undefined)
+    // Phones suspend audio when the screen turns off (iOS calls it "interrupted"); wake it again so listening carries on.
+    const audioState: string = this.context?.state ?? 'closed'
+    if (audioState === 'suspended' || audioState === 'interrupted') void this.context?.resume().catch(() => undefined)
+    // If the microphone itself was taken away there is nothing left to listen to, so say so instead of hanging.
+    if (this.stream?.getAudioTracks().every((track) => track.readyState === 'ended')) {
+      this.pause()
+      this.events.onInterrupted()
+      return
+    }
     const now = performance.now()
     const level = this.level()
     this.events.onLevel(Math.min(1, level * 6))

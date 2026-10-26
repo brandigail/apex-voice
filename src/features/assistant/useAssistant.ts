@@ -165,6 +165,10 @@ export function useAssistant(firstName: string): UseAssistant {
         setError('I stopped listening because it has been quiet for a while. Tap the orb when you are ready.')
         end()
       },
+      onInterrupted: () => {
+        setError('Listening was interrupted, for example by locking the screen or a phone call. Tap the orb to start again.')
+        end()
+      },
       onError: (message) => {
         setError(message)
         if (session) listenAgain(session)
