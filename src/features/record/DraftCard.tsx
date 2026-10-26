@@ -1,14 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
-import { Check, Copy, Mail, MessageCircle, MessageSquare, Share2 } from 'lucide-react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { Check, Copy, ExternalLink, Mail, MessageCircle, MessageSquare, Share2 } from 'lucide-react'
+import { ChannelIcon } from '../../components/ChannelIcon'
+import { bodyLabel, channelFor, hasRecipient, hasSubject, subjectLabel } from '../../lib/channels'
 import {
   EMAIL_PROVIDERS,
   buildEmailUrl,
   buildSmsUrl,
   buildWhatsAppUrl,
   draftToText,
+  isInternationalNumber,
   type EmailProvider,
 } from '../../lib/share'
-import { DRAFT_CATEGORIES, type DraftCategory, type GeneratedDraft } from '../../types/draft'
+import type { GeneratedDraft } from '../../types/draft'
 import type { SaveStatus } from './useDraftAutosave'
 import { useEmailProvider } from './useEmailProvider'
 import type { VoiceNoteResult } from './useVoiceNote'
@@ -28,20 +31,11 @@ const SAVE_LABEL: Record<SaveStatus, string> = {
 
 type CopyState = 'idle' | 'copied' | 'failed'
 
-const CATEGORY_LABEL: Record<DraftCategory, string> = {
-  EMAIL: 'Email',
-  QUOTE: 'Quote',
-  SMS: 'SMS',
-  NOTE: 'Note',
-}
-
-const fieldClass =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus-visible:outline-2 focus-visible:outline-indigo-500 dark:border-slate-700 dark:bg-slate-950'
-const actionClass =
-  'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500'
+const labelClass = 'mb-1.5 block text-sm font-semibold'
 
 export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
   const { draft, transcript } = result
+  const channel = channelFor(draft.category)
   const [copyState, setCopyState] = useState<CopyState>('idle')
   const resetTimer = useRef<number | null>(null)
   const [emailProvider, setEmailProvider] = useEmailProvider()
@@ -54,10 +48,12 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
     [],
   )
 
-  const hasSubject = draft.category === 'EMAIL' || draft.category === 'QUOTE'
   const canSend = draft.body.trim().length > 0
-  const sendsAsSms = draft.category === 'SMS'
-  const sendsAsMail = hasSubject
+  const isMail = channel.kind === 'mail'
+  const isSocial = channel.kind === 'social'
+  const canNativeShare = typeof navigator.share === 'function'
+  const whatsappNeedsNumber =
+    draft.category === 'WHATSAPP' && draft.recipient.trim() !== '' && !isInternationalNumber(draft.recipient)
 
   const handleCopy = async () => {
     try {
@@ -70,8 +66,6 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
     resetTimer.current = window.setTimeout(() => setCopyState('idle'), 2000)
   }
 
-  const canNativeShare = typeof navigator.share === 'function'
-
   /** Opens the device share sheet, which lists every installed mail, chat and notes app. */
   const handleShare = async () => {
     try {
@@ -81,166 +75,179 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
     }
   }
 
+  const linkButton = (href: string | undefined, label: string, icon: React.ReactNode, external: boolean) => (
+    <a
+      href={canSend ? href : undefined}
+      target={external ? '_blank' : undefined}
+      rel="noopener noreferrer"
+      aria-disabled={!canSend}
+      className="btn btn-channel"
+    >
+      {icon}
+      {label}
+    </a>
+  )
+
   return (
     <article
       aria-label="Draft"
-      className="w-full rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm dark:border-slate-800 dark:bg-slate-900"
+      style={{ '--c1': channel.from, '--c2': channel.to } as CSSProperties}
+      className="surface animate-rise w-full overflow-hidden text-left"
     >
-      <div className="flex flex-col gap-4">
-        <div>
-          <label htmlFor="draft-category" className="mb-1 block text-sm font-medium">
-            Type
-          </label>
-          <select
-            id="draft-category"
-            value={draft.category}
-            onChange={(e) => onChange({ category: e.target.value as DraftCategory })}
-            className={fieldClass}
-          >
-            {DRAFT_CATEGORIES.map((category) => (
-              <option key={category} value={category}>
-                {CATEGORY_LABEL[category]}
-              </option>
-            ))}
-          </select>
+      <div className="h-1 bg-linear-to-r from-(--c1) to-(--c2)" aria-hidden="true" />
+      <div className="p-5">
+        <div className="flex items-center gap-3">
+          <span className="flex size-11 items-center justify-center rounded-xl bg-linear-to-br from-(--c1) to-(--c2) text-white shadow-md">
+            <ChannelIcon category={draft.category} className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg leading-tight font-bold">Your {channel.label} draft</h2>
+            <p role="status" aria-live="polite" className={`text-xs ${saveStatus === 'error' ? 'text-red-500' : 'muted'}`}>
+              {SAVE_LABEL[saveStatus] || 'Edit anything before you send'}
+            </p>
+          </div>
         </div>
 
-        {draft.category !== 'NOTE' && (
+        <div className="mt-5 flex flex-col gap-4">
+          {hasRecipient(channel) && (
+            <div>
+              <label htmlFor="draft-recipient" className={labelClass}>
+                To
+              </label>
+              <input
+                id="draft-recipient"
+                type="text"
+                value={draft.recipient}
+                onChange={(e) => onChange({ recipient: e.target.value })}
+                placeholder={
+                  isMail
+                    ? 'Email address or name'
+                    : draft.category === 'WHATSAPP'
+                      ? 'Number with country code, e.g. +27 82 123 4567'
+                      : 'Phone number or name'
+                }
+                autoComplete="off"
+                className="field"
+              />
+              {whatsappNeedsNumber && (
+                <p className="muted mt-1.5 text-xs">
+                  Add the number with its country code (+27…) to open that chat directly. Otherwise WhatsApp will let
+                  you pick the contact.
+                </p>
+              )}
+            </div>
+          )}
+
+          {hasSubject(channel) && (
+            <div>
+              <label htmlFor="draft-subject" className={labelClass}>
+                {subjectLabel(channel)}
+              </label>
+              <input
+                id="draft-subject"
+                type="text"
+                value={draft.subject}
+                onChange={(e) => onChange({ subject: e.target.value })}
+                className="field"
+              />
+            </div>
+          )}
+
           <div>
-            <label htmlFor="draft-recipient" className="mb-1 block text-sm font-medium">
-              To
+            <label htmlFor="draft-body" className={labelClass}>
+              {bodyLabel(channel)}
             </label>
-            <input
-              id="draft-recipient"
-              type="text"
-              value={draft.recipient}
-              onChange={(e) => onChange({ recipient: e.target.value })}
-              placeholder={sendsAsSms ? 'Phone number or name' : 'Email address or name'}
-              autoComplete="off"
-              className={fieldClass}
+            <textarea
+              id="draft-body"
+              value={draft.body}
+              onChange={(e) => onChange({ body: e.target.value })}
+              rows={isSocial || isMail ? 10 : 6}
+              className="field resize-y leading-relaxed"
             />
           </div>
-        )}
 
-        {hasSubject && (
-          <div>
-            <label htmlFor="draft-subject" className="mb-1 block text-sm font-medium">
-              Subject
-            </label>
-            <input
-              id="draft-subject"
-              type="text"
-              value={draft.subject}
-              onChange={(e) => onChange({ subject: e.target.value })}
-              className={fieldClass}
-            />
-          </div>
-        )}
-
-        <div>
-          <label htmlFor="draft-body" className="mb-1 block text-sm font-medium">
-            Message
-          </label>
-          <textarea
-            id="draft-body"
-            value={draft.body}
-            onChange={(e) => onChange({ body: e.target.value })}
-            rows={9}
-            className={`${fieldClass} resize-y`}
-          />
-        </div>
-
-        {sendsAsMail && (
-          <div>
-            <label htmlFor="draft-mail-app" className="mb-1 block text-sm font-medium">
-              Email app
-            </label>
-            <select
-              id="draft-mail-app"
-              value={emailProvider}
-              onChange={(e) => setEmailProvider(e.target.value as EmailProvider)}
-              className={fieldClass}
-            >
-              {EMAIL_PROVIDERS.map((provider) => (
-                <option key={provider.id} value={provider.id}>
-                  {provider.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => void handleCopy()}
-            disabled={!canSend}
-            className={`${actionClass} border border-slate-300 hover:bg-slate-100 disabled:opacity-60 dark:border-slate-700 dark:hover:bg-slate-800`}
-          >
-            {copyState === 'copied' ? <Check className="size-4" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
-            {copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy failed' : 'Copy'}
-          </button>
-
-          {sendsAsMail && (
-            <a
-              href={canSend ? buildEmailUrl(emailProvider, draft) : undefined}
-              target={emailProvider === 'default' ? undefined : '_blank'}
-              rel="noopener noreferrer"
-              aria-disabled={!canSend}
-              className={`${actionClass} bg-indigo-600 text-white hover:bg-indigo-700 aria-disabled:opacity-60`}
-            >
-              <Mail className="size-4" aria-hidden="true" />
-              Open in {providerLabel}
-            </a>
+          {isMail && (
+            <div>
+              <label htmlFor="draft-mail-app" className={labelClass}>
+                Email app
+              </label>
+              <select
+                id="draft-mail-app"
+                value={emailProvider}
+                onChange={(e) => setEmailProvider(e.target.value as EmailProvider)}
+                className="field"
+              >
+                {EMAIL_PROVIDERS.map((provider) => (
+                  <option key={provider.id} value={provider.id}>
+                    {provider.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
-          {sendsAsSms && (
-            <a
-              href={canSend ? buildSmsUrl(draft) : undefined}
-              aria-disabled={!canSend}
-              className={`${actionClass} bg-indigo-600 text-white hover:bg-indigo-700 aria-disabled:opacity-60`}
-            >
-              <MessageSquare className="size-4" aria-hidden="true" />
-              Open in messages
-            </a>
-          )}
-          {draft.category !== 'NOTE' && (
-            <a
-              href={canSend ? buildWhatsAppUrl(draft) : undefined}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-disabled={!canSend}
-              className={`${actionClass} border border-slate-300 hover:bg-slate-100 aria-disabled:opacity-60 dark:border-slate-700 dark:hover:bg-slate-800`}
-            >
-              <MessageCircle className="size-4" aria-hidden="true" />
-              WhatsApp
-            </a>
-          )}
-          {canNativeShare && (
-            <button
-              type="button"
-              onClick={() => void handleShare()}
-              disabled={!canSend}
-              className={`${actionClass} border border-slate-300 hover:bg-slate-100 disabled:opacity-60 dark:border-slate-700 dark:hover:bg-slate-800`}
-            >
-              <Share2 className="size-4" aria-hidden="true" />
-              Share…
+
+          <div className="flex flex-wrap gap-2">
+            {isMail &&
+              linkButton(
+                buildEmailUrl(emailProvider, draft),
+                `Open in ${providerLabel}`,
+                <Mail className="size-4" aria-hidden="true" />,
+                emailProvider !== 'default',
+              )}
+            {draft.category === 'WHATSAPP' &&
+              linkButton(
+                buildWhatsAppUrl(draft),
+                'Send on WhatsApp',
+                <MessageCircle className="size-4" aria-hidden="true" />,
+                true,
+              )}
+            {draft.category === 'SMS' &&
+              linkButton(buildSmsUrl(draft), 'Open in messages', <MessageSquare className="size-4" aria-hidden="true" />, false)}
+            {isSocial && channel.appUrl && (
+              <a
+                href={canSend ? channel.appUrl : undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-disabled={!canSend}
+                onClick={() => void handleCopy()}
+                className="btn btn-channel"
+              >
+                <ExternalLink className="size-4" aria-hidden="true" />
+                Copy &amp; open {channel.label}
+              </a>
+            )}
+
+            <button type="button" onClick={() => void handleCopy()} disabled={!canSend} className="btn btn-ghost">
+              {copyState === 'copied' ? <Check className="size-4" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
+              {copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy failed' : 'Copy'}
             </button>
-          )}
+
+            {draft.category === 'QUOTE' && (
+              <a
+                href={canSend ? buildWhatsAppUrl(draft) : undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-disabled={!canSend}
+                className="btn btn-ghost"
+              >
+                <MessageCircle className="size-4" aria-hidden="true" />
+                WhatsApp
+              </a>
+            )}
+            {canNativeShare && (
+              <button type="button" onClick={() => void handleShare()} disabled={!canSend} className="btn btn-ghost">
+                <Share2 className="size-4" aria-hidden="true" />
+                Share…
+              </button>
+            )}
+          </div>
         </div>
+
+        <details className="muted mt-5 text-sm">
+          <summary>What we heard (transcript)</summary>
+          <p className="mt-2 whitespace-pre-wrap">{transcript}</p>
+        </details>
       </div>
-
-      <p
-        role="status"
-        aria-live="polite"
-        className={`mt-3 text-xs ${saveStatus === 'error' ? 'text-red-700 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}
-      >
-        {SAVE_LABEL[saveStatus]}
-      </p>
-
-      <details className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-        <summary className="cursor-pointer">Transcript</summary>
-        <p className="mt-2 whitespace-pre-wrap">{transcript}</p>
-      </details>
     </article>
   )
 }

@@ -1,6 +1,90 @@
 @import "tailwindcss";
+@import "@fontsource-variable/plus-jakarta-sans";
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+@theme static {
+  --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --animate-orb-spin: orb-spin 14s linear infinite;
+  --animate-orb-pulse: orb-pulse 2.4s ease-out infinite;
+  --animate-bar: bar-dance 1s ease-in-out infinite;
+  --animate-drift: aurora-drift 22s ease-in-out infinite alternate;
+  --animate-rise: rise 500ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes orb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orb-pulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes bar-dance {
+  0%,
+  100% {
+    transform: scaleY(0.25);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes aurora-drift {
+  from {
+    transform: translate3d(-4%, -2%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(4%, 3%, 0) scale(1.15);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+/* Design tokens. The light and dark palettes differ only here; components read these variables. */
+:root {
+  --page: #f5f3ff;
+  --ink: #130f2a;
+  --muted: #5d5a7a;
+  --surface: rgb(255 255 255 / 0.74);
+  --surface-strong: #ffffff;
+  --line: rgb(99 102 241 / 0.16);
+  --field: rgb(255 255 255 / 0.9);
+  --glow-a: rgb(139 92 246 / 0.28);
+  --glow-b: rgb(217 70 239 / 0.2);
+  --glow-c: rgb(34 211 238 / 0.2);
+  --shadow: 0 24px 60px -28px rgb(76 29 149 / 0.45);
+  color-scheme: light;
+}
+
+.dark {
+  --page: #07060f;
+  --ink: #f4f2ff;
+  --muted: #a5a1c7;
+  --surface: rgb(255 255 255 / 0.055);
+  --surface-strong: #14112a;
+  --line: rgb(255 255 255 / 0.1);
+  --field: rgb(255 255 255 / 0.06);
+  --glow-a: rgb(124 58 237 / 0.5);
+  --glow-b: rgb(217 70 239 / 0.28);
+  --glow-c: rgb(6 182 212 / 0.26);
+  --shadow: 0 24px 60px -28px rgb(0 0 0 / 0.8);
+  color-scheme: dark;
+}
 
 html,
 body,
@@ -8,8 +92,15 @@ body,
   min-height: 100%;
 }
 
-/* Tailwind v4's reset leaves buttons with the default arrow cursor, so restore the pointer for anything clickable. */
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
 @layer base {
+  /* Tailwind v4's reset leaves buttons with the default arrow cursor, so restore the pointer for anything clickable. */
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
   a[href],
@@ -30,11 +121,161 @@ body,
       background-color 150ms,
       color 150ms,
       border-color 150ms,
-      opacity 150ms;
+      opacity 150ms,
+      transform 150ms,
+      box-shadow 150ms,
+      filter 150ms;
   }
 
   button:not(:disabled):active,
   a[href]:active {
-    opacity: 0.8;
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+
+  :focus-visible {
+    outline: 2px solid #a78bfa;
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: rgb(139 92 246 / 0.4);
+  }
+}
+
+@layer components {
+  .muted {
+    color: var(--muted);
+  }
+
+  .surface {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 1.25rem;
+    box-shadow: var(--shadow);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+  }
+
+  .field {
+    width: 100%;
+    border-radius: 0.8rem;
+    border: 1px solid var(--line);
+    background: var(--field);
+    padding: 0.7rem 0.9rem;
+    color: inherit;
+    transition:
+      border-color 150ms,
+      box-shadow 150ms;
+  }
+
+  .field:hover {
+    border-color: rgb(139 92 246 / 0.5);
+  }
+
+  .field:focus-visible {
+    outline: none;
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 4px rgb(139 92 246 / 0.22);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.85rem;
+    padding: 0.65rem 1.1rem;
+    font-size: 0.875rem;
+    font-weight: 650;
+    line-height: 1.25rem;
+  }
+
+  .btn-primary {
+    color: #fff;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 52%, #d946ef 100%);
+    box-shadow:
+      0 10px 28px -10px rgb(139 92 246 / 0.9),
+      inset 0 1px 0 rgb(255 255 255 / 0.25);
+  }
+
+  .btn-primary:not(:disabled):not([aria-disabled="true"]):hover {
+    filter: brightness(1.12);
+    transform: translateY(-1px);
+    box-shadow:
+      0 16px 34px -10px rgb(139 92 246 / 1),
+      inset 0 1px 0 rgb(255 255 255 / 0.3);
+  }
+
+  .btn-ghost {
+    background: var(--surface);
+    border: 1px solid var(--line);
+  }
+
+  .btn-ghost:not(:disabled):not([aria-disabled="true"]):hover {
+    border-color: rgb(139 92 246 / 0.65);
+    background: rgb(139 92 246 / 0.12);
+  }
+
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    opacity: 0.5;
+  }
+
+  .text-gradient {
+    background: linear-gradient(100deg, #818cf8 0%, #c084fc 45%, #f472b6 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .aurora {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .aurora::before,
+  .aurora::after {
+    content: "";
+    position: absolute;
+    inset: -20%;
+    animation: var(--animate-drift);
+  }
+
+  .aurora::before {
+    background:
+      radial-gradient(40% 36% at 18% 12%, var(--glow-a), transparent 70%),
+      radial-gradient(34% 30% at 88% 22%, var(--glow-b), transparent 70%);
+  }
+
+  .aurora::after {
+    background: radial-gradient(38% 34% at 70% 92%, var(--glow-c), transparent 70%);
+    animation-direction: alternate-reverse;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora::before,
+  .aurora::after {
+    animation: none;
+  }
+}
+
+@layer components {
+  /* Primary action tinted with the channel colours set as --c1 and --c2 on an ancestor. */
+  .btn-channel {
+    color: #fff;
+    background: linear-gradient(135deg, var(--c1), var(--c2));
+    box-shadow:
+      0 10px 28px -10px var(--c1),
+      inset 0 1px 0 rgb(255 255 255 / 0.25);
+  }
+
+  .btn-channel:not(:disabled):not([aria-disabled="true"]):hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
   }
 }

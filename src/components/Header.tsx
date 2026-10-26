@@ -2,19 +2,22 @@ import { AudioWaveform, LogOut, Moon, Sun } from 'lucide-react'
 import { authClient } from '../lib/auth-client'
 import { useTheme } from '../providers/useTheme'
 
-const iconButton =
-  'inline-flex size-10 items-center justify-center rounded-full hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-indigo-500 dark:hover:bg-slate-800'
+const iconButton = 'inline-flex size-10 items-center justify-center rounded-full hover:bg-violet-500/15'
 
 export function Header({ signedIn }: { signedIn: boolean }) {
   const { theme, toggleTheme } = useTheme()
   const isDark = theme === 'dark'
 
   return (
-    <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
-      <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
-        <div className="flex items-center gap-2 font-semibold">
-          <AudioWaveform className="size-5 text-indigo-600 dark:text-indigo-400" aria-hidden="true" />
-          Apex Voice
+    <header className="sticky top-0 z-20 border-b border-(--line) bg-(--page)/70 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-2xl items-center justify-between px-4">
+        <div className="flex items-center gap-2.5 text-lg font-extrabold tracking-tight">
+          <span className="flex size-9 items-center justify-center rounded-xl bg-linear-to-br from-indigo-500 via-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/40">
+            <AudioWaveform className="size-5" aria-hidden="true" />
+          </span>
+          <span>
+            Apex <span className="text-gradient">Voice</span>
+          </span>
         </div>
         <div className="flex items-center">
           <button

@@ -15,6 +15,7 @@ export const generatedDraftSchema = z.object({
 
 export const generateRequestSchema = z.object({
   transcript: z.string().trim().min(1).max(MAX_TRANSCRIPT_LENGTH),
+  category: z.enum(DRAFT_CATEGORIES),
 }) satisfies z.ZodType<GenerateRequest>
 
 export const draftSchema = generatedDraftSchema.extend({

@@ -12,9 +12,9 @@ export function RecordTimer({ elapsedMs }: RecordTimerProps) {
 
   return (
     <div className="w-full max-w-xs">
-      <p className="text-center font-mono text-3xl tabular-nums">
+      <p className="text-center font-mono text-4xl font-semibold tabular-nums">
         {formatDuration(elapsedMs)}
-        <span className="text-base text-slate-500 dark:text-slate-400"> / {formatDuration(maxMs)}</span>
+        <span className="muted text-base font-normal"> / {formatDuration(maxMs)}</span>
       </p>
       <div
         role="progressbar"
@@ -22,10 +22,12 @@ export function RecordTimer({ elapsedMs }: RecordTimerProps) {
         aria-valuemin={0}
         aria-valuemax={MAX_RECORDING_SECONDS}
         aria-valuenow={Math.floor(elapsedMs / 1000)}
-        className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800"
+        className="mt-3 h-1.5 overflow-hidden rounded-full bg-(--line)"
       >
         <div
-          className={`h-full transition-[width] ${nearLimit ? 'bg-red-500' : 'bg-indigo-500'}`}
+          className={`h-full rounded-full transition-[width] ${
+            nearLimit ? 'bg-red-500' : 'bg-linear-to-r from-indigo-500 via-violet-500 to-fuchsia-500'
+          }`}
           style={{ width: `${percent}%` }}
         />
       </div>

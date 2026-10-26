@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { ApiError, GenerateRequest } from '../types/api'
 import { generatedDraftSchema } from '../types/draft-schema'
-import type { GeneratedDraft } from '../types/draft'
+import type { DraftCategory, GeneratedDraft } from '../types/draft'
 import { extensionForMime } from './audio-mime'
 
 const REQUEST_TIMEOUT_MS = 20_000
@@ -58,8 +58,8 @@ export async function transcribeAudio(blob: Blob, mimeType: string): Promise<str
   return data.data.text
 }
 
-export async function generateDraft(transcript: string): Promise<GeneratedDraft> {
-  const payload: GenerateRequest = { transcript }
+export async function generateDraft(transcript: string, category: DraftCategory): Promise<GeneratedDraft> {
+  const payload: GenerateRequest = { transcript, category }
   const data = generateResponseSchema.safeParse(
     await request('/api/generate', {
       headers: { 'Content-Type': 'application/json' },

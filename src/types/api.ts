@@ -1,4 +1,4 @@
-import type { Draft, GeneratedDraft } from './draft.ts'
+import type { Draft, DraftCategory, GeneratedDraft } from './draft.ts'
 
 export interface ApiError {
   error: string
@@ -18,6 +18,8 @@ export interface SaveDraftResponse {
 
 export interface GenerateRequest {
   transcript: string
+  /** The channel the user chose before recording; it decides the style of the draft. */
+  category: DraftCategory
 }
 
 export interface GenerateResponse {

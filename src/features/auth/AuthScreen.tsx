@@ -5,7 +5,7 @@ import { authClient } from '../../lib/auth-client'
 type Mode = 'sign-in' | 'sign-up'
 
 const fieldClass =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus-visible:outline-2 focus-visible:outline-indigo-500 dark:border-slate-700 dark:bg-slate-900'
+  'field'
 
 export function AuthScreen() {
   const [mode, setMode] = useState<Mode>('sign-in')
@@ -42,18 +42,20 @@ export function AuthScreen() {
 
   return (
     <section aria-labelledby="auth-heading" className="mx-auto max-w-sm text-center">
-      <AudioWaveform className="mx-auto size-8 text-indigo-600 dark:text-indigo-400" aria-hidden="true" />
-      <h1 id="auth-heading" className="mt-3 text-2xl font-bold">
+      <span className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-linear-to-br from-indigo-500 via-violet-500 to-fuchsia-500 text-white shadow-xl shadow-violet-500/40">
+        <AudioWaveform className="size-8" aria-hidden="true" />
+      </span>
+      <h1 id="auth-heading" className="mt-5 text-3xl font-extrabold tracking-tight">
         {signingUp ? 'Create your account' : 'Sign in'}
       </h1>
-      <p className="mt-2 text-slate-600 dark:text-slate-400">
-        {signingUp ? 'Drafts will be written in your name.' : 'Welcome back to Apex Voice.'}
+      <p className="mt-2 muted">
+        {signingUp ? 'Drafts will be written and signed in your name.' : 'Speak it once. Send it as an email, WhatsApp, SMS or social post.'}
       </p>
 
-      <form onSubmit={(e) => void handleSubmit(e)} className="mt-6 flex flex-col gap-4 text-left">
+      <form onSubmit={(e) => void handleSubmit(e)} className="surface mt-6 flex flex-col gap-4 p-6 text-left">
         {signingUp && (
           <div>
-            <label htmlFor="auth-name" className="mb-1 block text-sm font-medium">
+            <label htmlFor="auth-name" className="mb-1.5 block text-sm font-semibold">
               Your name
             </label>
             <input
@@ -67,7 +69,7 @@ export function AuthScreen() {
           </div>
         )}
         <div>
-          <label htmlFor="auth-email" className="mb-1 block text-sm font-medium">
+          <label htmlFor="auth-email" className="mb-1.5 block text-sm font-semibold">
             Email
           </label>
           <input
@@ -81,7 +83,7 @@ export function AuthScreen() {
           />
         </div>
         <div>
-          <label htmlFor="auth-password" className="mb-1 block text-sm font-medium">
+          <label htmlFor="auth-password" className="mb-1.5 block text-sm font-semibold">
             Password
           </label>
           <div className="relative">
@@ -101,13 +103,13 @@ export function AuthScreen() {
               onClick={() => setShowPassword((shown) => !shown)}
               aria-label={showPassword ? 'Hide password' : 'Show password'}
               aria-pressed={showPassword}
-              className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-slate-500 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-indigo-500 dark:text-slate-400 dark:hover:text-slate-100"
+              className="muted absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg hover:text-(--ink)"
             >
               {showPassword ? <EyeOff className="size-5" aria-hidden="true" /> : <Eye className="size-5" aria-hidden="true" />}
             </button>
           </div>
           {signingUp && (
-            <p id="auth-password-hint" className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            <p id="auth-password-hint" className="mt-1 text-xs muted">
               At least 8 characters.
             </p>
           )}
@@ -122,18 +124,18 @@ export function AuthScreen() {
         <button
           type="submit"
           disabled={busy}
-          className="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:opacity-60"
+          className="btn btn-primary py-3"
         >
           {busy ? 'Please wait…' : signingUp ? 'Create account' : 'Sign in'}
         </button>
       </form>
 
-      <p className="mt-6 text-sm text-slate-600 dark:text-slate-400">
+      <p className="mt-6 text-sm muted">
         {signingUp ? 'Already have an account?' : 'New here?'}{' '}
         <button
           type="button"
           onClick={switchMode}
-          className="font-medium text-indigo-600 underline hover:text-indigo-800 focus-visible:outline-2 focus-visible:outline-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-200"
+          className="font-semibold text-violet-500 underline hover:text-fuchsia-400"
         >
           {signingUp ? 'Sign in' : 'Create an account'}
         </button>

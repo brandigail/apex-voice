@@ -12,9 +12,10 @@ interface AppShellProps {
 
 export function AppShell({ activeTab, onTabChange, signedIn, children }: AppShellProps) {
   return (
-    <div className="flex min-h-dvh flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="relative flex min-h-dvh flex-col">
+      <div className="aurora" aria-hidden="true" />
       <Header signedIn={signedIn} />
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 pt-6 pb-28">{children}</main>
+      <main className="relative z-10 mx-auto w-full max-w-2xl flex-1 px-4 pt-6 pb-32">{children}</main>
       {signedIn && <TabBar active={activeTab} onChange={onTabChange} />}
     </div>
   )

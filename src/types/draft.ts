@@ -1,4 +1,4 @@
-export const DRAFT_CATEGORIES = ['EMAIL', 'QUOTE', 'SMS', 'NOTE'] as const
+export const DRAFT_CATEGORIES = ['EMAIL', 'QUOTE', 'WHATSAPP', 'SMS', 'INSTAGRAM', 'FACEBOOK', 'TIKTOK', 'NOTE'] as const
 
 export type DraftCategory = (typeof DRAFT_CATEGORIES)[number]
 

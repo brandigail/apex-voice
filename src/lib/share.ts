@@ -40,16 +40,22 @@ export function buildSmsUrl(draft: GeneratedDraft): string {
   return `sms:${to}?&body=${encodeURIComponent(draft.body)}`
 }
 
-/** WhatsApp needs the full international number. Without a "+" or "00" prefix the link opens WhatsApp's contact picker instead. */
+/** WhatsApp needs the full international number, written with a leading "+" or "00". */
+export function isInternationalNumber(value: string): boolean {
+  const recipient = value.trim()
+  return /^(\+|00)/.test(recipient) && PHONE_PATTERN.test(recipient)
+}
+
+/** Without an international number the link opens WhatsApp's contact picker instead of a specific chat. */
 export function buildWhatsAppUrl(draft: GeneratedDraft): string {
   const recipient = draft.recipient.trim()
-  const international = /^(\+|00)/.test(recipient) && PHONE_PATTERN.test(recipient)
-  const digits = international ? recipient.replace(/\D/g, '').replace(/^00/, '') : ''
+  const digits = isInternationalNumber(recipient) ? recipient.replace(/\D/g, '').replace(/^00/, '') : ''
   return `https://wa.me/${digits}?text=${encodeURIComponent(draftToText(draft))}`
 }
 
-/** Plain text for the clipboard: subject, a blank line, then the body. */
+/** Plain text for the clipboard: for mail, the subject, a blank line, then the body. Chat and social drafts are the body alone. */
 export function draftToText(draft: GeneratedDraft): string {
   const subject = draft.subject.trim()
-  return subject ? `${subject}\n\n${draft.body}` : draft.body
+  const hasMailSubject = draft.category === 'EMAIL' || draft.category === 'QUOTE'
+  return subject && hasMailSubject ? `${subject}\n\n${draft.body}` : draft.body
 }

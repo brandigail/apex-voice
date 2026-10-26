@@ -6,7 +6,7 @@ import { PROFILE_LIMITS, type Profile, type ProfileSource } from '../../types/pr
 type SaveState = { kind: 'idle' } | { kind: 'saving' } | { kind: 'saved' } | { kind: 'error'; message: string }
 
 const fieldClass =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus-visible:outline-2 focus-visible:outline-indigo-500 dark:border-slate-700 dark:bg-slate-900'
+  'field'
 
 interface TextFieldProps {
   id: string
@@ -22,7 +22,7 @@ interface TextFieldProps {
 function TextField({ id, label, value, max, onChange, required, type = 'text', autoComplete }: TextFieldProps) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-sm font-medium">
+      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold">
         {label}
       </label>
       <input
@@ -67,7 +67,7 @@ function ProfileForm({ initial }: { initial: Profile }) {
   }
 
   return (
-    <form onSubmit={(e) => void handleSubmit(e)} className="mt-6 flex flex-col gap-4 text-left">
+    <form onSubmit={(e) => void handleSubmit(e)} className="surface mt-6 flex flex-col gap-4 p-6 text-left">
       <TextField
         id="profile-name"
         label="Your name"
@@ -104,8 +104,8 @@ function ProfileForm({ initial }: { initial: Profile }) {
       />
 
       <div>
-        <label htmlFor="profile-signature" className="mb-1 block text-sm font-medium">
-          Custom sign-off <span className="font-normal text-slate-500 dark:text-slate-400">(optional)</span>
+        <label htmlFor="profile-signature" className="mb-1.5 block text-sm font-semibold">
+          Custom sign-off <span className="font-normal muted">(optional)</span>
         </label>
         <textarea
           id="profile-signature"
@@ -116,7 +116,7 @@ function ProfileForm({ initial }: { initial: Profile }) {
           aria-describedby="profile-signature-hint"
           className={`${fieldClass} resize-y`}
         />
-        <p id="profile-signature-hint" className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        <p id="profile-signature-hint" className="mt-1 text-xs muted">
           Leave empty to build one from the details above. Anything you write here is used exactly as typed.
         </p>
       </div>
@@ -125,7 +125,7 @@ function ProfileForm({ initial }: { initial: Profile }) {
         <p className="mb-1 text-sm font-medium">Emails and quotes will end with</p>
         <pre
           aria-label="Signature preview"
-          className="whitespace-pre-wrap rounded-lg border border-dashed border-slate-300 bg-slate-100 p-3 font-sans text-sm dark:border-slate-700 dark:bg-slate-900"
+          className="whitespace-pre-wrap rounded-xl border border-dashed border-(--line) bg-(--surface) p-3 font-sans text-sm"
         >
           {buildSignature(profileFromUser(profile)) || 'Add your name to see a preview.'}
         </pre>
@@ -135,12 +135,12 @@ function ProfileForm({ initial }: { initial: Profile }) {
         <button
           type="submit"
           disabled={save.kind === 'saving' || !profile.name.trim()}
-          className="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:opacity-60"
+          className="btn btn-primary"
         >
           {save.kind === 'saving' ? 'Saving…' : 'Save profile'}
         </button>
         <p role="status" aria-live="polite" className="text-sm">
-          {save.kind === 'saved' && <span className="text-green-700 dark:text-green-400">Saved</span>}
+          {save.kind === 'saved' && <span className="text-emerald-500">Saved</span>}
           {save.kind === 'error' && <span className="text-red-700 dark:text-red-400">{save.message}</span>}
         </p>
       </div>
@@ -151,12 +151,12 @@ function ProfileForm({ initial }: { initial: Profile }) {
 export function ProfileView({ user }: { user: ProfileSource & { id: string; email: string } }) {
   return (
     <section aria-labelledby="profile-heading">
-      <h1 id="profile-heading" className="text-2xl font-bold">
-        Your profile
+      <h1 id="profile-heading" className="text-3xl font-extrabold tracking-tight">
+        Your <span className="text-gradient">profile</span>
       </h1>
-      <p className="mt-2 text-slate-600 dark:text-slate-400">
+      <p className="mt-2 muted">
         Drafts are written in your name and signed for you, so you never have to dictate a sign-off. Signed in as{' '}
-        <span className="font-medium text-slate-900 dark:text-slate-100">{user.email}</span>.
+        <span className="font-semibold">{user.email}</span>.
       </p>
       <ProfileForm key={user.id} initial={profileFromUser(user)} />
     </section>

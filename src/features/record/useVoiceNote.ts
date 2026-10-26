@@ -1,7 +1,7 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiRequestError, generateDraft, transcribeAudio } from '../../lib/api'
 import { authClient } from '../../lib/auth-client'
-import type { GeneratedDraft } from '../../types/draft'
+import type { DraftCategory, GeneratedDraft } from '../../types/draft'
 import type { RecordedAudio } from './useAudioRecorder'
 
 export type VoiceNoteStage = 'idle' | 'transcribing' | 'structuring' | 'done' | 'error'
@@ -27,10 +27,16 @@ export interface UseVoiceNote {
   reset: () => void
 }
 
-export function useVoiceNote(): UseVoiceNote {
+/** `category` is the channel the user picked; the latest value is read when a recording finishes. */
+export function useVoiceNote(category: DraftCategory): UseVoiceNote {
   const [stage, setStage] = useState<VoiceNoteStage>('idle')
   const [result, setResult] = useState<VoiceNoteResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  const categoryRef = useRef(category)
+  useEffect(() => {
+    categoryRef.current = category
+  }, [category])
 
   const recordingRef = useRef<RecordedAudio | null>(null)
   const transcriptRef = useRef<string | null>(null)
@@ -56,7 +62,7 @@ export function useVoiceNote(): UseVoiceNote {
         }
 
         setStage('structuring')
-        const draft = await generateDraft(transcript)
+        const draft = await generateDraft(transcript, categoryRef.current)
         if (!isCurrent()) return
 
         setResult({ id: crypto.randomUUID(), createdAt: new Date().toISOString(), transcript, draft })

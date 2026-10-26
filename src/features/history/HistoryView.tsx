@@ -24,12 +24,13 @@ export function HistoryView() {
 
   return (
     <section aria-labelledby="history-heading">
-      <h1 id="history-heading" className="text-2xl font-bold">
-        Draft history
+      <h1 id="history-heading" className="text-3xl font-extrabold tracking-tight">
+        Draft <span className="text-gradient">history</span>
       </h1>
+      <p className="muted mt-1">Everything you have recorded, saved and searchable.</p>
 
       {status === 'loading' && (
-        <p role="status" className="mt-4 text-slate-500 dark:text-slate-400">
+        <p role="status" className="mt-4 muted">
           Loading your drafts…
         </p>
       )}
@@ -57,7 +58,7 @@ export function HistoryView() {
       )}
 
       {status === 'ready' && drafts.length === 0 && (
-        <p className="mt-4 text-slate-600 dark:text-slate-400">
+        <p className="mt-4 muted">
           No drafts yet. Record a voice note and it will be saved here automatically.
         </p>
       )}
@@ -67,7 +68,7 @@ export function HistoryView() {
       )}
 
       {drafts.length > 0 && visible.length === 0 && (
-        <p className="mt-4 text-slate-600 dark:text-slate-400">No drafts match your search.</p>
+        <p className="mt-4 muted">No drafts match your search.</p>
       )}
 
       {visible.length > 0 && (

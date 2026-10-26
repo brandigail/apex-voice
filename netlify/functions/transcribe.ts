@@ -1,5 +1,6 @@
 import { extensionForMime } from '../../src/lib/audio-mime.ts'
 import type { TranscribeResponse } from '../../src/types/api.ts'
+import { transcriptionPrompt } from './_lib/draft-prompt.ts'
 import { errorResponse, json } from './_lib/http.ts'
 import { claimQuota } from './_lib/rate-limit.ts'
 import { requireUser } from './_lib/session.ts'
@@ -47,6 +48,7 @@ export default async function handler(req: Request): Promise<Response> {
   upstream.set('model', GROQ_MODEL)
   upstream.set('response_format', 'json')
   upstream.set('temperature', '0')
+  upstream.set('prompt', transcriptionPrompt(session.user.profile))
 
   let response: Response
   try {

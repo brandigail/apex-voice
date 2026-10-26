@@ -1,6 +1,6 @@
 import type { GenerateResponse } from '../../src/types/api.ts'
 import { generateRequestSchema, generatedDraftSchema } from '../../src/types/draft-schema.ts'
-import type { GeneratedDraft } from '../../src/types/draft.ts'
+import type { DraftCategory, GeneratedDraft } from '../../src/types/draft.ts'
 import { retryPrompt, systemPrompt, userPrompt } from './_lib/draft-prompt.ts'
 import { errorResponse, json } from './_lib/http.ts'
 import { claimQuota } from './_lib/rate-limit.ts'
@@ -54,15 +54,18 @@ async function chat(apiKey: string, messages: ChatMessage[], timeoutMs: number):
 
 type ParseResult = { ok: true; draft: GeneratedDraft } | { ok: false; problem: string }
 
-function parseDraft(content: string): ParseResult {
+/** The model writes the text fields only; the channel is the one the user chose, never the model's guess. */
+const modelDraftSchema = generatedDraftSchema.omit({ category: true })
+
+function parseDraft(content: string, category: DraftCategory): ParseResult {
   let raw: unknown
   try {
     raw = JSON.parse(content)
   } catch {
     return { ok: false, problem: 'it was not valid JSON' }
   }
-  const result = generatedDraftSchema.safeParse(raw)
-  if (result.success) return { ok: true, draft: result.data }
+  const result = modelDraftSchema.safeParse(raw)
+  if (result.success) return { ok: true, draft: { ...result.data, category } }
   const problem = result.error.issues.map((i) => `${i.path.join('.') || 'root'}: ${i.message}`).join('; ')
   return { ok: false, problem }
 }
@@ -92,10 +95,11 @@ export default async function handler(req: Request): Promise<Response> {
   if (!quota.ok) return quota.response
 
   const { profile } = session.user
+  const { category, transcript } = request.data
   const startedAt = Date.now()
   const messages: ChatMessage[] = [
-    { role: 'system', content: systemPrompt(profile) },
-    { role: 'user', content: userPrompt(request.data.transcript) },
+    { role: 'system', content: systemPrompt(category, profile) },
+    { role: 'user', content: userPrompt(transcript) },
   ]
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
@@ -108,7 +112,7 @@ export default async function handler(req: Request): Promise<Response> {
       return errorResponse(result.status === 504 ? 504 : 502, 'Could not create a draft. Please try again.')
     }
 
-    const parsed = parseDraft(result.content)
+    const parsed = parseDraft(result.content, category)
     if (parsed.ok) return json<GenerateResponse>({ draft: withSignature(parsed.draft, profile) })
 
     console.error('Invalid draft from model:', parsed.problem)
