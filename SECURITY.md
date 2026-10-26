@@ -11,7 +11,7 @@ Written 2026-10-26 from the code and the live system, not from memory. Everythin
 | What | Where | Who could read it | Protection | Kept for |
 |---|---|---|---|---|
 | Name, email, **password** | Neon database (Amazon Web Services, Ohio, USA) | Anyone with database access | The password is stored only as a salted one-way hash (scrypt). It cannot be read back, even by us. | Until the account is deleted (there is no delete button yet) |
-| **Drafts** (recipient, subject, text, the transcript of what was said) | Neon database | Anyone with database access | Encrypted on disk by Neon (AES-256). **Not encrypted by Apex itself**, so it is plain text to anyone who can open the database | Until you delete it |
+| **Drafts** (recipient, subject, text, the transcript of what was said) | Neon database | Anyone with database access | Encrypted on disk by Neon (AES-256). **From the next deploy also encrypted by Apex itself** (see the status above); until then it is plain text to anyone who can open the database | Until you delete it |
 | **Assistant conversations** | Neon database | Same | Same | Latest 1,000 messages per person, or until deleted |
 | Agenda items, profile, **calendar link** | Neon database | Same | Same. The calendar link works like a password to the whole calendar and is stored as plain text | Until changed or removed |
 | Subscription and payments | Neon database | Same | Only plan, amount, status and PayFast's payment reference. **No card numbers ever touch Apex** (PayFast handles those) | |
@@ -51,8 +51,16 @@ Neon says it encrypts customer data at rest with AES-256 and enforces TLS 1.2+ i
 
 ## 4. Known gaps (what is NOT secure yet), most serious first
 
-**Status 2026-10-26 evening:** G2 (browser headers) and G3 (content-free logs) are built and tested locally but **not live yet**, because the Netlify credits ran out and nothing can be deployed until they reset in November. They ship in the first deploy after that. The live site still has these two gaps until then.
+**Status 2026-10-26 night.** Built and tested on the developer's computer, **not live yet** because the Netlify credits ran out and nothing can be deployed until they reset in November. All of it ships in the first deploy after that, and the live site has these gaps until then:
 
+- **G1 encryption: built and tested.** Messages, subjects, recipients, transcripts, assistant conversations, agenda items and the calendar link are encrypted with AES-256-GCM before they are saved, with a separate key per person derived from one master key kept only in the server settings. Checked: the database holds only scrambled text, the app reads it back correctly, another person's key cannot open it, a copied or tampered value is rejected, and old plain-text rows still work until they are converted (scripts/encrypt-existing.ts, run only after deploying).
+- **G2 browser headers: built and tested** (zero blocked items across every feature).
+- **G3 content-free logs: built.**
+- **G5 delete and download: built and tested.** "Download my data" gives a readable file; "Delete my account and data" removes the account and everything linked to it (checked in the database).
+
+**Still open:** G4 (password reset and two-step login), G6 (your own accounts: turn on two-step login on Neon, Netlify, Groq and GitHub), G7 (open sign-up), G8 (privacy policy), and Groq Zero Data Retention (a switch in your Groq account).
+
+**Keep a copy of the master key.** It is the value of `DATA_ENCRYPTION_KEY` in `.env.local`. If it is lost, encrypted data can never be read again. Save it in a password manager, and put the same value in Netlify's settings before the next deploy.
 
 | # | Gap | Why it matters | Fix | Effort |
 |---|---|---|---|---|
