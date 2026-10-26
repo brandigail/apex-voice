@@ -1,4 +1,4 @@
-import { AlertCircle, CalendarPlus, CheckCheck, FilePenLine, Sparkles, Square, Trash2 } from 'lucide-react'
+import { AlertCircle, BellRing, CalendarPlus, CheckCheck, FilePenLine, Sparkles, Square, Trash2 } from 'lucide-react'
 import type { Tab } from '../../components/TabBar'
 import type { AssistantAction } from '../../types/assistant'
 import { AssistantOrb } from './AssistantOrb'
@@ -33,7 +33,9 @@ function ActionChip({ action, onNavigate }: { action: AssistantAction; onNavigat
       ? { icon: FilePenLine, text: `Draft saved: ${action.label}`, tab: 'history' as const }
       : action.type === 'agenda_added'
         ? { icon: CalendarPlus, text: `Added: ${action.label}`, tab: 'agenda' as const }
-        : { icon: CheckCheck, text: `Marked sent: ${action.label}`, tab: 'history' as const }
+        : action.type === 'send_scheduled'
+          ? { icon: BellRing, text: `Reminder set: ${action.label}`, tab: 'agenda' as const }
+          : { icon: CheckCheck, text: `Marked sent: ${action.label}`, tab: 'history' as const }
   const Icon = config.icon
   return (
     <button

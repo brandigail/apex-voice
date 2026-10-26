@@ -6,7 +6,9 @@ import { chat, type ChatMessage } from './_lib/groq-chat.ts'
 import { errorResponse, json } from './_lib/http.ts'
 import { claimQuota } from './_lib/rate-limit.ts'
 import { requireUser } from './_lib/session.ts'
+import { rememberTurn } from './_lib/conversations.ts'
 import { safeTimeZone } from './_lib/time.ts'
+import { SPOKEN_CODES } from '../../src/types/languages.ts'
 
 /** Netlify's default function timeout is 10 s; leave a second for the response. */
 const DEADLINE_MS = 9_000
@@ -40,6 +42,8 @@ const requestSchema = z.object({
     .min(1)
     .max(MAX_TURNS),
   timeZone: z.string().max(64),
+  conversationId: z.uuid(),
+  spokenLanguage: z.string().refine((code) => SPOKEN_CODES.includes(code)).optional(),
 })
 
 /** Some models wrap their reasoning in <think> tags; it must never be spoken. */
@@ -62,6 +66,7 @@ const CONFIRMATIONS: Record<AssistantAction['type'], string> = {
   draft_created: `I've written that up and saved it. ${READ_BACK_QUESTION}`,
   agenda_added: "That's on your agenda now.",
   marked_sent: "Done, I've marked that as sent.",
+  send_scheduled: "I've set a reminder on your agenda.",
 }
 
 export default async function handler(req: Request): Promise<Response> {
@@ -94,6 +99,15 @@ export default async function handler(req: Request): Promise<Response> {
     apiKey,
     deadlineAt: startedAt + DEADLINE_MS,
     actions: [],
+    spokenLanguage: request.data.spokenLanguage,
+  }
+  const { conversationId } = request.data
+  const lastUserText = request.data.messages[request.data.messages.length - 1].content
+
+  /** Saves the exchange to the user's history, then answers. */
+  const respond = async (reply: string): Promise<Response> => {
+    await rememberTurn(session.user.id, conversationId, lastUserText, reply, ctx.actions)
+    return json<AssistantResponse>({ reply, actions: ctx.actions, speechLanguage: ctx.speechLanguage })
   }
 
   const models = assistantModels()
@@ -118,12 +132,14 @@ export default async function handler(req: Request): Promise<Response> {
     }
     if (!result.ok) {
       if (result.status === 429) return errorResponse(429, 'The AI service is busy. Try again in a moment.')
+      // The model sometimes makes a malformed tool call, which Groq rejects with 400. Asking again usually works.
+      if (result.status === 400) continue
       break
     }
 
     if (result.toolCalls.length === 0) {
       const reply = spoken(result.content)
-      if (reply) return json<AssistantResponse>({ reply: withReadBackQuestion(reply, ctx.actions), actions: ctx.actions })
+      if (reply) return respond(withReadBackQuestion(reply, ctx.actions))
       break
     }
 
@@ -135,8 +151,7 @@ export default async function handler(req: Request): Promise<Response> {
 
   // Out of time or rounds. If something was already done, say so rather than losing it.
   if (ctx.actions.length > 0) {
-    const reply = [...new Set(ctx.actions.map((a) => a.type))].map((type) => CONFIRMATIONS[type]).join(' ')
-    return json<AssistantResponse>({ reply, actions: ctx.actions })
+    return respond([...new Set(ctx.actions.map((a) => a.type))].map((type) => CONFIRMATIONS[type]).join(' '))
   }
   return errorResponse(504, "Sorry, that took too long. Could you say it again?")
 }

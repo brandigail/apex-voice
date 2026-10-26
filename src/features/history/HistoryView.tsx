@@ -1,36 +1,74 @@
 import { useMemo, useState } from 'react'
 import { AlertCircle, RotateCcw } from 'lucide-react'
-import type { DraftCategory } from '../../types/draft'
+import { ConversationsView } from './ConversationsView'
 import { DraftListItem } from './DraftListItem'
-import { HistoryFilters } from './HistoryFilters'
+import { HistoryFilters, type CategoryFilter, type StatusFilter } from './HistoryFilters'
 import { useDrafts } from './useDrafts'
 
-export function HistoryView() {
-  const { drafts, status, error, reload, remove, setSent } = useDrafts()
-  const [query, setQuery] = useState('')
-  const [category, setCategory] = useState<DraftCategory | 'ALL'>('ALL')
+type Section = 'drafts' | 'conversations'
 
-  const visible = useMemo(() => {
-    const needle = query.trim().toLowerCase()
-    return drafts.filter(
-      (draft) =>
-        (category === 'ALL' || draft.category === category) &&
-        (needle === '' ||
-          [draft.recipient, draft.subject, draft.body, draft.transcript].some((field) =>
-            field.toLowerCase().includes(needle),
-          )),
-    )
-  }, [drafts, query, category])
+const SECTIONS: readonly { id: Section; label: string }[] = [
+  { id: 'drafts', label: 'Drafts' },
+  { id: 'conversations', label: 'Conversations' },
+]
+
+const NEVER = Number.MAX_SAFE_INTEGER
+
+export function HistoryView() {
+  const [section, setSection] = useState<Section>('drafts')
 
   return (
     <section aria-labelledby="history-heading">
       <h1 id="history-heading" className="text-3xl font-extrabold tracking-tight">
-        Draft <span className="text-gradient">history</span>
+        Your <span className="text-gradient">history</span>
       </h1>
-      <p className="muted mt-1">Everything you have recorded, saved and searchable.</p>
+      <div role="tablist" aria-label="History sections" className="surface mt-4 flex gap-1 p-1">
+        {SECTIONS.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={section === id}
+            onClick={() => setSection(id)}
+            className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold ${
+              section === id ? 'bg-linear-to-r from-indigo-500 via-violet-500 to-fuchsia-500 text-white shadow-md' : 'muted hover:bg-violet-500/10'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {section === 'drafts' ? <DraftsSection /> : <ConversationsView />}
+    </section>
+  )
+}
 
-      {status === 'loading' && (
-        <p role="status" className="mt-4 muted">
+function DraftsSection() {
+  const { drafts, status: loadStatus, error, reload, remove, updateStatus } = useDrafts()
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState<CategoryFilter>('ALL')
+  const [status, setStatus] = useState<StatusFilter>('ALL')
+
+  const unsentCount = useMemo(() => drafts.filter((draft) => draft.sentAt === null).length, [drafts])
+
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase()
+    const matching = drafts.filter(
+      (draft) =>
+        (category === 'ALL' || draft.category === category) &&
+        (status === 'ALL' || (status === 'SENT') === (draft.sentAt !== null)) &&
+        (needle === '' || [draft.recipient, draft.subject, draft.body, draft.transcript].some((field) => field.toLowerCase().includes(needle))),
+    )
+    // "To send" shows what is due soonest first; drafts with no planned time follow, newest first.
+    return status === 'UNSENT'
+      ? [...matching].sort((a, b) => (a.sendAt ? Date.parse(a.sendAt) : NEVER) - (b.sendAt ? Date.parse(b.sendAt) : NEVER))
+      : matching
+  }, [drafts, query, category, status])
+
+  return (
+    <div>
+      {loadStatus === 'loading' && (
+        <p role="status" className="muted mt-4">
           Loading your drafts…
         </p>
       )}
@@ -38,17 +76,13 @@ export function HistoryView() {
       {error && (
         <div
           role="alert"
-          className="mt-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+          className="mt-4 flex items-start gap-3 rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-700 dark:text-red-200"
         >
           <AlertCircle className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
           <div className="flex-1">
             <p>{error}</p>
-            {status === 'error' && (
-              <button
-                type="button"
-                onClick={reload}
-                className="mt-3 inline-flex items-center gap-2 rounded-lg border border-red-300 px-3 py-1.5 font-medium hover:bg-red-100 focus-visible:outline-2 focus-visible:outline-red-500 dark:border-red-800 dark:hover:bg-red-900"
-              >
+            {loadStatus === 'error' && (
+              <button type="button" onClick={reload} className="btn btn-ghost mt-3">
                 <RotateCcw className="size-4" aria-hidden="true" />
                 Try again
               </button>
@@ -57,27 +91,33 @@ export function HistoryView() {
         </div>
       )}
 
-      {status === 'ready' && drafts.length === 0 && (
-        <p className="mt-4 muted">
-          No drafts yet. Record a voice note and it will be saved here automatically.
-        </p>
+      {loadStatus === 'ready' && drafts.length === 0 && (
+        <p className="muted mt-4">No drafts yet. Record a voice note and it will be saved here automatically.</p>
       )}
 
       {drafts.length > 0 && (
-        <HistoryFilters query={query} onQuery={setQuery} category={category} onCategory={setCategory} />
+        <HistoryFilters
+          query={query}
+          onQuery={setQuery}
+          category={category}
+          onCategory={setCategory}
+          status={status}
+          onStatus={setStatus}
+          unsentCount={unsentCount}
+        />
       )}
 
       {drafts.length > 0 && visible.length === 0 && (
-        <p className="mt-4 muted">No drafts match your search.</p>
+        <p className="muted mt-4">{status === 'UNSENT' && query === '' ? 'Nothing waiting to be sent.' : 'No drafts match your search.'}</p>
       )}
 
       {visible.length > 0 && (
         <ul className="mt-4 flex flex-col gap-3">
           {visible.map((draft) => (
-            <DraftListItem key={draft.id} draft={draft} onDelete={remove} onToggleSent={setSent} />
+            <DraftListItem key={draft.id} draft={draft} onDelete={remove} onUpdateStatus={updateStatus} />
           ))}
         </ul>
       )}
-    </section>
+    </div>
   )
 }

@@ -2,7 +2,7 @@ import { neon, type NeonQueryFunction } from '@neondatabase/serverless'
 import type { Config } from '@netlify/functions'
 import { z } from 'zod'
 import type { ListDraftsResponse, SaveDraftResponse } from '../../src/types/api.ts'
-import { markSentRequestSchema, saveDraftSchema } from '../../src/types/draft-schema.ts'
+import { draftStatusSchema, saveDraftSchema } from '../../src/types/draft-schema.ts'
 import type { Draft, DraftCategory } from '../../src/types/draft.ts'
 import { errorResponse, json } from './_lib/http.ts'
 import { requireUser } from './_lib/session.ts'
@@ -21,9 +21,11 @@ interface DraftRow {
   created_at: string | Date
   updated_at: string | Date
   sent_at: string | Date | null
+  send_at: string | Date | null
+  language: string
 }
 
-const COLUMNS = 'id, category, recipient, subject, body, transcript, created_at, updated_at, sent_at'
+const COLUMNS = 'id, category, recipient, subject, body, transcript, created_at, updated_at, sent_at, send_at, language'
 
 function toDraft(row: DraftRow): Draft {
   return {
@@ -36,6 +38,8 @@ function toDraft(row: DraftRow): Draft {
     createdAt: new Date(row.created_at).toISOString(),
     updatedAt: new Date(row.updated_at).toISOString(),
     sentAt: row.sent_at ? new Date(row.sent_at).toISOString() : null,
+    sendAt: row.send_at ? new Date(row.send_at).toISOString() : null,
+    language: row.language,
   }
 }
 
@@ -68,7 +72,7 @@ export default async function handler(req: Request): Promise<Response> {
     if (id !== null && !z.uuid().safeParse(id).success) return errorResponse(400, 'Invalid draft id.')
 
     if (req.method === 'PUT' && id !== null) return await upsert(req, sql, userId, id)
-    if (req.method === 'PATCH' && id !== null) return await markSent(req, sql, userId, id)
+    if (req.method === 'PATCH' && id !== null) return await updateStatus(req, sql, userId, id)
 
     if (req.method === 'DELETE' && id !== null) {
       const deleted = await sql.query('DELETE FROM drafts WHERE id = $1 AND user_id = $2 RETURNING id', [id, userId])
@@ -103,14 +107,14 @@ async function upsert(req: Request, sql: NeonQueryFunction<false, false>, userId
 
   // The WHERE clause means a draft owned by someone else is never overwritten, even if its id is known.
   const rows = (await sql.query(
-    `INSERT INTO drafts (id, user_id, category, recipient, subject, body, transcript, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())
+    `INSERT INTO drafts (id, user_id, category, recipient, subject, body, transcript, created_at, updated_at, language)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), $9)
      ON CONFLICT (id) DO UPDATE SET
        category = EXCLUDED.category, recipient = EXCLUDED.recipient, subject = EXCLUDED.subject,
-       body = EXCLUDED.body, transcript = EXCLUDED.transcript, updated_at = now()
+       body = EXCLUDED.body, transcript = EXCLUDED.transcript, language = EXCLUDED.language, updated_at = now()
      WHERE drafts.user_id = EXCLUDED.user_id
      RETURNING ${COLUMNS}`,
-    [id, userId, draft.category, draft.recipient, draft.subject, draft.body, draft.transcript, draft.createdAt],
+    [id, userId, draft.category, draft.recipient, draft.subject, draft.body, draft.transcript, draft.createdAt, draft.language],
   )) as DraftRow[]
 
   return rows.length > 0 ? json<SaveDraftResponse>({ draft: toDraft(rows[0]) }) : errorResponse(404, 'Draft not found.')
@@ -118,13 +122,18 @@ async function upsert(req: Request, sql: NeonQueryFunction<false, false>, userId
 
 export const config: Config = { path: ['/api/drafts', '/api/drafts/*'] }
 
-async function markSent(req: Request, sql: NeonQueryFunction<false, false>, userId: string, id: string): Promise<Response> {
-  const parsed = markSentRequestSchema.safeParse(await req.json().catch(() => null))
-  if (!parsed.success) return errorResponse(400, 'Send {"sent": true} or {"sent": false}.')
+async function updateStatus(req: Request, sql: NeonQueryFunction<false, false>, userId: string, id: string): Promise<Response> {
+  const parsed = draftStatusSchema.safeParse(await req.json().catch(() => null))
+  if (!parsed.success) return errorResponse(400, 'Send {"sent": true} and/or {"sendAt": "<date>" or null}.')
+  const { sent, sendAt } = parsed.data
+  // A field that is left out keeps its current value; an explicit null clears the planned send time.
   const rows = (await sql.query(
-    `UPDATE drafts SET sent_at = CASE WHEN $3 THEN now() ELSE NULL END, updated_at = now()
+    `UPDATE drafts SET
+       sent_at = CASE WHEN $3::boolean IS NULL THEN sent_at WHEN $3 THEN now() ELSE NULL END,
+       send_at = CASE WHEN $4::boolean THEN $5::timestamptz ELSE send_at END,
+       updated_at = now()
      WHERE id = $1 AND user_id = $2 RETURNING ${COLUMNS}`,
-    [id, userId, parsed.data.sent],
+    [id, userId, sent ?? null, sendAt !== undefined, sendAt ?? null],
   )) as DraftRow[]
   return rows.length > 0 ? json<SaveDraftResponse>({ draft: toDraft(rows[0]) }) : errorResponse(404, 'Draft not found.')
 }

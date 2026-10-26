@@ -18,9 +18,27 @@ export function profileFromUser(user: ProfileSource): Profile {
   }
 }
 
+/** The polite closing line for each language a draft can be written in; English is used for any other. */
+const CLOSINGS: Record<string, string> = {
+  en: 'Kind regards,',
+  af: 'Vriendelike groete,',
+  es: 'Saludos cordiales,',
+  fr: 'Cordialement,',
+  de: 'Mit freundlichen Grüßen,',
+  pt: 'Atenciosamente,',
+  nl: 'Met vriendelijke groet,',
+  it: 'Cordiali saluti,',
+  sw: 'Wako mwaminifu,',
+  zu: 'Ozithobayo,',
+  xh: 'Ozithobileyo,',
+}
+
+/** The closing phrases in {@link CLOSINGS}, lower case without punctuation, so a sign-off written by the model can be recognised. */
+export const CLOSING_PHRASES: readonly string[] = Object.values(CLOSINGS).map((c) => c.replace(/,$/, '').toLowerCase())
+
 /** The sign-off appended to emails and quotes: the custom one if set, otherwise built from the profile. */
-export function buildSignature(profile: Profile): string {
+export function buildSignature(profile: Profile, language = 'en'): string {
   if (profile.signature) return profile.signature
   const organisation = [profile.role, profile.businessName].filter(Boolean).join(', ')
-  return ['Kind regards,', profile.name, organisation, profile.phone].filter(Boolean).join('\n')
+  return [CLOSINGS[language] ?? CLOSINGS.en, profile.name, organisation, profile.phone].filter(Boolean).join('\n')
 }

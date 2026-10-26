@@ -1,22 +1,27 @@
 import { useState, type CSSProperties } from 'react'
-import { Check, CheckCheck, ChevronDown, Copy, Send, Trash2 } from 'lucide-react'
+import { BellRing, Check, CheckCheck, ChevronDown, Copy, Send, Trash2 } from 'lucide-react'
 import { ChannelIcon } from '../../components/ChannelIcon'
 import { channelFor } from '../../lib/channels'
+import { useNow } from '../../lib/useNow'
 import { draftToText } from '../../lib/share'
-import type { Draft } from '../../types/draft'
+import type { Draft, DraftStatusUpdate } from '../../types/draft'
+import { languageName } from '../../types/languages'
+import { SendAtField } from './SendAtField'
 
 interface DraftListItemProps {
   draft: Draft
   onDelete: (id: string) => Promise<boolean>
-  onToggleSent: (id: string, sent: boolean) => Promise<void>
+  onUpdateStatus: (id: string, update: DraftStatusUpdate) => Promise<void>
 }
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+const sendAtFormat = new Intl.DateTimeFormat(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
 
-export function DraftListItem({ draft, onDelete, onToggleSent }: DraftListItemProps) {
+export function DraftListItem({ draft, onDelete, onUpdateStatus }: DraftListItemProps) {
   const [copied, setCopied] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const channel = channelFor(draft.category)
+  const now = useNow()
 
   const title = draft.subject || draft.body.split('\n')[0] || draft.recipient || 'Untitled draft'
 
@@ -46,6 +51,21 @@ export function DraftListItem({ draft, onDelete, onToggleSent }: DraftListItemPr
                 {channel.label}
               </span>
               <span className="flex items-center gap-2">
+                {draft.language !== 'en' && (
+                  <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-xs font-semibold text-sky-500">
+                    {languageName(draft.language)}
+                  </span>
+                )}
+                {!draft.sentAt && draft.sendAt && (
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                      new Date(draft.sendAt).getTime() < now ? 'bg-red-500/15 text-red-500' : 'bg-amber-500/15 text-amber-500'
+                    }`}
+                  >
+                    <BellRing className="size-3" aria-hidden="true" />
+                    {sendAtFormat.format(new Date(draft.sendAt))}
+                  </span>
+                )}
                 {draft.sentAt && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                     <CheckCheck className="size-3" aria-hidden="true" />
@@ -66,13 +86,21 @@ export function DraftListItem({ draft, onDelete, onToggleSent }: DraftListItemPr
 
         <div className="border-t border-(--line) p-4">
           <p className="text-sm leading-relaxed whitespace-pre-wrap">{draft.body}</p>
+          <div className="mt-4">
+            <SendAtField
+              id={`send-at-${draft.id}`}
+              value={draft.sendAt}
+              sent={draft.sentAt !== null}
+              onChange={(sendAt) => void onUpdateStatus(draft.id, { sendAt })}
+            />
+          </div>
           <div className="mt-4 flex flex-wrap gap-2">
             <button type="button" onClick={() => void handleCopy()} className="btn btn-ghost">
               {copied ? <Check className="size-4" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
               {copied ? 'Copied' : 'Copy'}
             </button>
 
-            <button type="button" onClick={() => void onToggleSent(draft.id, !draft.sentAt)} className="btn btn-ghost">
+            <button type="button" onClick={() => void onUpdateStatus(draft.id, { sent: !draft.sentAt })} className="btn btn-ghost">
               <Send className="size-4" aria-hidden="true" />
               {draft.sentAt ? 'Mark as not sent' : 'Mark as sent'}
             </button>

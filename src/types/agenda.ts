@@ -9,7 +9,8 @@ export interface AgendaItem {
   notes: string
   /** True for all-day calendar events, which have no meaningful clock time. */
   allDay: boolean
-  source: 'apex' | 'calendar'
+  /** "draft" items are saved drafts with a planned send time that are not sent yet. */
+  source: 'apex' | 'calendar' | 'draft'
 }
 
 export interface AgendaResponse {
@@ -24,4 +25,13 @@ export interface NewAgendaItem {
   startsAt: string
   endsAt: string | null
   notes: string
+}
+
+/** What the "test this calendar link" check found. */
+export interface CalendarCheckResponse {
+  ok: boolean
+  error: string | null
+  /** Events in the next 30 days. */
+  count: number
+  next: { title: string; startsAt: string; allDay: boolean }[]
 }

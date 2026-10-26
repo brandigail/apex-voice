@@ -50,18 +50,48 @@ export async function request(path: string, init: RequestInit = {}): Promise<unk
   }
 }
 
-/** `forAssistant` bills the clip to the assistant's own quota instead of the one-off recording quota. */
-export async function transcribeAudio(blob: Blob, mimeType: string, forAssistant = false): Promise<string> {
+/**
+ * `forAssistant` bills the clip to the assistant's own quota instead of the one-off recording quota.
+ * `language` is the language being spoken, or "auto".
+ */
+export async function transcribeAudio(blob: Blob, mimeType: string, forAssistant = false, language = 'auto'): Promise<string> {
   const form = new FormData()
   form.set('audio', blob, `recording.${extensionForMime(mimeType)}`)
+  form.set('language', language)
   const path = forAssistant ? '/api/transcribe?for=assistant' : '/api/transcribe'
   const data = transcribeResponseSchema.safeParse(await request(path, { body: form }))
   if (!data.success) throw new ApiRequestError(502, 'The server sent an unexpected response.')
   return data.data.text
 }
 
-export async function generateDraft(transcript: string, category: DraftCategory): Promise<GeneratedDraft> {
-  const payload: GenerateRequest = { transcript, category }
+/**
+ * Transcribes a recording made of several clips and joins the text in order. A clip that is only silence counts as
+ * empty rather than as an error, because a long recording can easily contain one.
+ */
+export async function transcribeRecording(
+  segments: Blob[],
+  mimeType: string,
+  language: string,
+  forAssistant = false,
+): Promise<string> {
+  const parts = await Promise.all(
+    segments.map((clip) =>
+      transcribeAudio(clip, mimeType, forAssistant, language).catch((err: unknown) => {
+        if (err instanceof ApiRequestError && err.status === 422) return ''
+        throw err
+      }),
+    ),
+  )
+  return parts.join(' ').trim()
+}
+
+export async function generateDraft(
+  transcript: string,
+  category: DraftCategory,
+  writeLanguage: string,
+  spokenLanguage: string,
+): Promise<GeneratedDraft> {
+  const payload: GenerateRequest = { transcript, category, writeLanguage, spokenLanguage }
   const data = generateResponseSchema.safeParse(
     await request('/api/generate', {
       headers: { 'Content-Type': 'application/json' },

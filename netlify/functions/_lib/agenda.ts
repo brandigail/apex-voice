@@ -27,20 +27,51 @@ function toItem(row: AgendaRow): AgendaItem {
 
 const byStart = (a: AgendaItem, b: AgendaItem) => a.startsAt.localeCompare(b.startsAt)
 
+interface DueDraftRow {
+  id: string
+  category: string
+  recipient: string
+  subject: string
+  send_at: string | Date
+}
+
+const KIND_WORD: Record<string, string> = { EMAIL: 'email', QUOTE: 'quote', WHATSAPP: 'WhatsApp', SMS: 'text', NOTE: 'note' }
+
+/** Unsent drafts with a planned send time, including ones that are overdue, shown as things to do. */
+function dueDraftItem(row: DueDraftRow): AgendaItem {
+  const kind = KIND_WORD[row.category] ?? `${row.category.toLowerCase()} post`
+  const title = row.recipient ? `Send ${kind} to ${row.recipient}` : `Send ${kind}${row.subject ? `: ${row.subject}` : ''}`
+  return {
+    id: `draft-${row.id}`,
+    title,
+    startsAt: new Date(row.send_at).toISOString(),
+    endsAt: null,
+    notes: '',
+    allDay: false,
+    source: 'draft',
+  }
+}
+
 /** Apex items plus, when the user linked one, events from their calendar, soonest first. */
 export async function listAgenda(userId: string, calendarUrl: string, from: Date, to: Date): Promise<AgendaResponse> {
   const sql = neon(process.env.DATABASE_URL ?? '')
-  const [rows, calendar] = await Promise.all([
+  const [rows, dueDrafts, calendar] = await Promise.all([
     sql.query(
       `SELECT id, title, starts_at, ends_at, notes FROM agenda_items
        WHERE user_id = $1 AND COALESCE(ends_at, starts_at) >= $2 AND starts_at < $3
        ORDER BY starts_at LIMIT 200`,
       [userId, from.toISOString(), to.toISOString()],
     ) as unknown as Promise<AgendaRow[]>,
+    sql.query(
+      `SELECT id, category, recipient, subject, send_at FROM drafts
+       WHERE user_id = $1 AND sent_at IS NULL AND send_at IS NOT NULL AND send_at < $2
+       ORDER BY send_at LIMIT 100`,
+      [userId, to.toISOString()],
+    ) as unknown as Promise<DueDraftRow[]>,
     calendarUrl ? readCalendar(calendarUrl, from, to) : Promise.resolve(null),
   ])
 
-  const items = rows.map(toItem)
+  const items = [...rows.map(toItem), ...dueDrafts.map(dueDraftItem)]
   if (calendar?.ok) items.push(...calendar.items)
   return {
     items: items.sort(byStart),

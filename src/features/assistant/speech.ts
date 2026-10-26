@@ -55,8 +55,8 @@ export function splitForSpeech(text: string, max = CHUNK_CHARS): string[] {
 }
 
 /** The most natural-sounding voice the browser has, used only when the hosted voice is unavailable. */
-function pickBrowserVoice(): SpeechSynthesisVoice | undefined {
-  const voices = speechSynthesis.getVoices().filter((voice) => voice.lang.toLowerCase().startsWith('en'))
+function pickBrowserVoice(language = 'en'): SpeechSynthesisVoice | undefined {
+  const voices = speechSynthesis.getVoices().filter((voice) => voice.lang.toLowerCase().startsWith(language))
   const preferred = [/natural/i, /online/i, /google/i, /samantha|ava|serena|karen/i]
   for (const pattern of preferred) {
     const match = voices.find((voice) => pattern.test(voice.name))
@@ -86,10 +86,15 @@ export class SpeechPlayer {
   }
 
   /** Resolves when the whole reply has been spoken, or as soon as {@link stop} is called. */
-  async speak(text: string): Promise<SpeechEngine> {
+  async speak(text: string, language?: string): Promise<SpeechEngine> {
     this.stop()
     const abort = new AbortController()
     this.abort = abort
+    // The hosted voice only speaks English. Any other language goes straight to the browser's own voice for it.
+    if (language && language !== 'en') {
+      await this.speakWithBrowser(forSpeech(text), abort.signal, language)
+      return 'browser'
+    }
     const chunks = splitForSpeech(forSpeech(text))
     const voice = readStoredVoice()
     const fetched = new Map<number, Promise<Blob>>()
@@ -139,13 +144,14 @@ export class SpeechPlayer {
     })
   }
 
-  private speakWithBrowser(text: string, signal: AbortSignal): Promise<void> {
+  private speakWithBrowser(text: string, signal: AbortSignal, language?: string): Promise<void> {
     if (!('speechSynthesis' in window)) return Promise.resolve()
     return new Promise((resolve) => {
       const utterance = new SpeechSynthesisUtterance(text)
       // Some browsers never fire the end event (no voices installed); don't let that freeze the conversation.
       const watchdog = window.setTimeout(() => finish(), BROWSER_SPEECH_BASE_MS + text.length * BROWSER_SPEECH_MS_PER_CHAR)
-      utterance.voice = pickBrowserVoice() ?? null
+      utterance.voice = pickBrowserVoice(language) ?? null
+      if (language) utterance.lang = language
       utterance.rate = 1.02
       const finish = () => {
         window.clearTimeout(watchdog)

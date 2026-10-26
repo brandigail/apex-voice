@@ -18,6 +18,7 @@ function dayKey(item: AgendaItem): string {
 
 function dayTitle(key: string): string {
   const today = new Date()
+  if (key < localKey(today)) return 'Overdue'
   if (key === localKey(today)) return 'Today'
   if (key === localKey(new Date(today.getTime() + 24 * 60 * 60 * 1000))) return 'Tomorrow'
   const [y, m, d] = key.split('-').map(Number)
@@ -136,7 +137,7 @@ export function AgendaView({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
                 <li key={item.id} className="surface flex items-center gap-3 p-3">
                   <span
                     className={`h-10 w-1 shrink-0 rounded-full ${
-                      item.source === 'calendar' ? 'bg-cyan-400' : 'bg-linear-to-b from-indigo-500 to-fuchsia-500'
+                      item.source === 'calendar' ? 'bg-cyan-400' : item.source === 'draft' ? 'bg-amber-400' : 'bg-linear-to-b from-indigo-500 to-fuchsia-500'
                     }`}
                     aria-hidden="true"
                   />
@@ -144,7 +145,7 @@ export function AgendaView({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
                     <span className="block truncate font-semibold">{item.title}</span>
                     <span className="muted block text-sm">
                       {timeText(item)}
-                      {item.source === 'calendar' ? ' · from your calendar' : ''}
+                      {item.source === 'calendar' ? ' · from your calendar' : item.source === 'draft' ? ' · planned send' : ''}
                     </span>
                   </span>
                   {item.source === 'apex' && (

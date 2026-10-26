@@ -1,9 +1,23 @@
-import { buildSignature } from '../../../src/lib/profile.ts'
+import { buildSignature, CLOSING_PHRASES } from '../../../src/lib/profile.ts'
 import type { GeneratedDraft } from '../../../src/types/draft.ts'
 import type { Profile } from '../../../src/types/profile.ts'
 
-const CLOSING_LINE =
-  /^(best regards|kind regards|warm regards|many thanks|thanks|thank you|regards|sincerely|yours (?:sincerely|faithfully|truly)|cheers|best wishes|best)[,.!]?$/i
+const ENGLISH_CLOSINGS =
+  'best regards|kind regards|warm regards|many thanks|thanks|thank you|regards|sincerely|yours (?:sincerely|faithfully|truly)|cheers|best wishes|best'
+const OTHER_CLOSINGS =
+  [
+    'groete|vriendelike groete|met vriendelike groete|beste groete|hartlike groete|dankie|baie dankie',
+    'saludos|saludos cordiales|un saludo|atentamente|gracias|cordialmente',
+    'cordialement|bien cordialement|merci',
+    'mit freundlichen grüßen|freundliche grüße|viele grüße|liebe grüße|danke',
+    'obrigado|atenciosamente|cumprimentos',
+    'met vriendelijke groet|hartelijke groet|bedankt',
+    'cordiali saluti|distinti saluti|grazie',
+  ].join('|')
+const CLOSING_LINE = new RegExp(
+  `^(${ENGLISH_CLOSINGS}|${OTHER_CLOSINGS}|${CLOSING_PHRASES.join('|')})[,.!]?$`,
+  'i',
+)
 
 /** A short line after the closing phrase is almost certainly the sender's name, not content. */
 const MAX_NAME_LINE_LENGTH = 40
@@ -27,5 +41,5 @@ export function stripSignOff(body: string): string {
 /** Emails and quotes get the sender's signature appended; texts and notes don't. */
 export function withSignature(draft: GeneratedDraft, profile: Profile): GeneratedDraft {
   if (draft.category !== 'EMAIL' && draft.category !== 'QUOTE') return draft
-  return { ...draft, body: `${stripSignOff(draft.body)}\n\n${buildSignature(profile)}` }
+  return { ...draft, body: `${stripSignOff(draft.body)}\n\n${buildSignature(profile, draft.language)}` }
 }

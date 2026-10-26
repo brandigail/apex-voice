@@ -32,7 +32,15 @@ export default async function handler(req: Request): Promise<Response> {
   const quota = await claimQuota(session.user.id, 'generate')
   if (!quota.ok) return quota.response
 
-  const { category, transcript } = request.data
-  const result = await writeDraft({ apiKey, category, transcript, profile: session.user.profile, deadlineMs: DEADLINE_MS })
+  const { category, transcript, writeLanguage, spokenLanguage } = request.data
+  const result = await writeDraft({
+    apiKey,
+    category,
+    transcript,
+    profile: session.user.profile,
+    deadlineMs: DEADLINE_MS,
+    writeLanguage,
+    spokenLanguage,
+  })
   return result.ok ? json<GenerateResponse>({ draft: result.draft }) : errorResponse(result.status, result.message)
 }

@@ -8,10 +8,12 @@ import { HistoryView } from './features/history/HistoryView'
 import { ProfileView } from './features/profile/ProfileView'
 import { RecordView } from './features/record/RecordView'
 import { authClient } from './lib/auth-client'
+import { useFeatures } from './lib/useFeatures'
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('record')
   const { data: session, isPending } = authClient.useSession()
+  const features = useFeatures(Boolean(session))
 
   return (
     <AppShell activeTab={tab} onTabChange={setTab} signedIn={Boolean(session)}>
@@ -30,7 +32,7 @@ export default function App() {
       ) : tab === 'history' ? (
         <HistoryView />
       ) : (
-        <ProfileView user={session.user} />
+        <ProfileView user={session.user} showSubscriptions={features.subscriptions} />
       )}
     </AppShell>
   )

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ApiRequestError, generateDraft, transcribeAudio } from '../../lib/api'
+import { ApiRequestError, generateDraft, transcribeRecording } from '../../lib/api'
 import { authClient } from '../../lib/auth-client'
 import type { DraftCategory, GeneratedDraft } from '../../types/draft'
+import { readSpokenLanguage, readWriteLanguage } from '../language/languageSettings'
 import type { RecordedAudio } from './useAudioRecorder'
 
 export type VoiceNoteStage = 'idle' | 'transcribing' | 'structuring' | 'done' | 'error'
@@ -56,13 +57,14 @@ export function useVoiceNote(category: DraftCategory): UseVoiceNote {
         let transcript = transcriptRef.current
         if (transcript === null) {
           setStage('transcribing')
-          transcript = await transcribeAudio(recording.blob, recording.mimeType)
+          transcript = await transcribeRecording(recording.segments, recording.mimeType, readSpokenLanguage())
+          if (!transcript) throw new ApiRequestError(422, 'No speech detected. Try recording again.')
           if (!isCurrent()) return
           transcriptRef.current = transcript
         }
 
         setStage('structuring')
-        const draft = await generateDraft(transcript, categoryRef.current)
+        const draft = await generateDraft(transcript, categoryRef.current, readWriteLanguage(), readSpokenLanguage())
         if (!isCurrent()) return
 
         setResult({ id: crypto.randomUUID(), createdAt: new Date().toISOString(), transcript, draft })

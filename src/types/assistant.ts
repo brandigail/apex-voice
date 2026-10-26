@@ -12,6 +12,10 @@ export interface AssistantRequest {
   messages: AssistantTurn[]
   /** IANA zone such as "Africa/Johannesburg", so "tomorrow at ten" means the user's tomorrow. */
   timeZone: string
+  /** Groups the turns of one conversation so they can be listed together in the history. */
+  conversationId: string
+  /** The language being spoken, or "auto", so recognition is more accurate. */
+  spokenLanguage?: string
 }
 
 /** Things the assistant did on the user's behalf this turn, so the screen can show them. */
@@ -19,10 +23,13 @@ export type AssistantAction =
   | { type: 'draft_created'; id: string; category: DraftCategory; label: string }
   | { type: 'agenda_added'; id: string; label: string }
   | { type: 'marked_sent'; id: string; label: string }
+  | { type: 'send_scheduled'; id: string; label: string }
 
 export interface AssistantResponse {
   reply: string
   actions: AssistantAction[]
+  /** Set when the reply reads a draft that is not in English, so it is spoken with a matching voice. */
+  speechLanguage?: string
 }
 
 /** The voices Groq's Orpheus model offers. */

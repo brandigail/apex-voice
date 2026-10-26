@@ -6,7 +6,7 @@ import { requireUser } from './_lib/session.ts'
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/audio/speech'
 const GROQ_MODEL = 'canopylabs/orpheus-v1-english'
-const DEFAULT_VOICE = 'hannah'
+const DEFAULT_VOICE = 'diana'
 /** Netlify's default function timeout is 10 s. */
 const GROQ_TIMEOUT_MS = 8_500
 

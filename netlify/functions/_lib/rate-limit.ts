@@ -1,7 +1,7 @@
 import { neon } from '@neondatabase/serverless'
 import { errorResponse } from './http.ts'
 
-export type MeteredEndpoint = 'transcribe' | 'generate' | 'assistant' | 'listen' | 'speak'
+export type MeteredEndpoint = 'transcribe' | 'generate' | 'assistant' | 'listen' | 'speak' | 'calendar'
 
 export interface QuotaLimits {
   /** Calls one user may make in any rolling minute. */
@@ -31,14 +31,16 @@ function positiveInt(value: string | undefined, fallback: number): number {
 export function limitsFor(endpoint: MeteredEndpoint): QuotaLimits {
   switch (endpoint) {
     case 'transcribe':
-      // A recording is transcribed once, but "Try again" can regenerate a draft, so generate gets more headroom.
-      return { perMinute: 6, perDay: 30, globalPerDay: globalPerDay() }
+      // Every 45 second piece of a recording is one call, so a 5 minute recording is about seven calls.
+      return { perMinute: 16, perDay: 120, globalPerDay: Math.max(globalPerDay(), 1500) }
     case 'generate':
       return { perMinute: 10, perDay: 60, globalPerDay: globalPerDay() }
     case 'assistant':
       return { perMinute: 6, perDay: positiveInt(process.env.ASSISTANT_DAILY_LIMIT, 40), globalPerDay: 300 }
     case 'listen':
       return { perMinute: 12, perDay: 80, globalPerDay: 500 }
+    case 'calendar':
+      return { perMinute: 10, perDay: 100, globalPerDay: 1000 }
     case 'speak':
       return { perMinute: 24, perDay: 250, globalPerDay: 1500 }
   }
@@ -104,6 +106,7 @@ const NOUN: Record<MeteredEndpoint, string> = {
   assistant: 'assistant turns',
   listen: 'assistant voice clips',
   speak: 'spoken replies',
+  calendar: 'calendar checks',
 }
 
 function denial(counts: UsageCounts, limits: QuotaLimits, endpoint: MeteredEndpoint): Response {

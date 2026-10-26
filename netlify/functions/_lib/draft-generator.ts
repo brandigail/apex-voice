@@ -1,3 +1,5 @@
+import { z } from 'zod'
+import { AUTO, SAME } from '../../../src/types/languages.ts'
 import { generatedDraftSchema } from '../../../src/types/draft-schema.ts'
 import type { DraftCategory, GeneratedDraft } from '../../../src/types/draft.ts'
 import type { Profile } from '../../../src/types/profile.ts'
@@ -10,7 +12,10 @@ const MIN_RETRY_MS = 2_500
 const MAX_ATTEMPTS = 2
 
 /** The model writes the text fields only; the channel is the one the user chose, never the model's guess. */
-const modelDraftSchema = generatedDraftSchema.omit({ category: true })
+const modelDraftSchema = generatedDraftSchema.omit({ category: true, language: true }).extend({
+  // A model that forgets or mangles the code should not fail the draft; assume English.
+  language: z.string().toLowerCase().regex(/^[a-z]{2,3}$/).catch('en'),
+})
 
 type ParseResult = { ok: true; draft: GeneratedDraft } | { ok: false; problem: string }
 
@@ -36,13 +41,24 @@ export interface DraftRequest {
   profile: Profile
   /** Time the whole call, retry included, may take. */
   deadlineMs: number
+  /** A language code to write in, or "same" / undefined to write in the language that was spoken. */
+  writeLanguage?: string
+  spokenLanguage?: string
 }
 
 /** Turns a transcript into a validated, signed draft for one channel, retrying once if the model's JSON is invalid. */
-export async function writeDraft({ apiKey, category, transcript, profile, deadlineMs }: DraftRequest): Promise<DraftResult> {
+export async function writeDraft({
+  apiKey,
+  category,
+  transcript,
+  profile,
+  deadlineMs,
+  writeLanguage,
+  spokenLanguage,
+}: DraftRequest): Promise<DraftResult> {
   const startedAt = Date.now()
   const messages: ChatMessage[] = [
-    { role: 'system', content: systemPrompt(category, profile) },
+    { role: 'system', content: systemPrompt(category, profile, writeLanguage, spokenLanguage) },
     { role: 'user', content: userPrompt(transcript) },
   ]
 
@@ -57,7 +73,12 @@ export async function writeDraft({ apiKey, category, transcript, profile, deadli
     }
 
     const parsed = parseDraft(result.content, category)
-    if (parsed.ok) return { ok: true, draft: withSignature(parsed.draft, profile) }
+    if (parsed.ok) {
+      // A language the user chose is more reliable than the model's own label for what it wrote.
+      const chosen = writeLanguage && writeLanguage !== SAME ? writeLanguage : spokenLanguage && spokenLanguage !== AUTO ? spokenLanguage : null
+      const draft = chosen ? { ...parsed.draft, language: chosen } : parsed.draft
+      return { ok: true, draft: withSignature(draft, profile) }
+    }
 
     console.error('Invalid draft from model:', parsed.problem)
     messages.push({ role: 'assistant', content: result.content }, { role: 'user', content: retryPrompt(parsed.problem) })

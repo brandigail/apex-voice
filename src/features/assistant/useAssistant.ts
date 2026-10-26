@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ApiRequestError, transcribeAudio } from '../../lib/api'
+import { ApiRequestError, transcribeRecording } from '../../lib/api'
 import { askAssistant } from '../../lib/assistant-api'
 import { authClient } from '../../lib/auth-client'
 import { startBackgroundListening, stopBackgroundListening } from '../../lib/native-listening'
 import type { AssistantAction, AssistantTurn } from '../../types/assistant'
+import { readSpokenLanguage } from '../language/languageSettings'
 import { Listener, ScreenLock, type Utterance } from './listener'
 import { SpeechPlayer } from './speech'
 
@@ -21,6 +22,8 @@ const HISTORY_TURNS = 8
 
 interface Session {
   id: number
+  /** Groups this conversation's turns in the saved history. */
+  conversationId: string
   listener: Listener
   player: SpeechPlayer
   lock: ScreenLock
@@ -79,10 +82,10 @@ export function useAssistant(firstName: string): UseAssistant {
   }, [isCurrent])
 
   const speakReply = useCallback(
-    async (session: Session, text: string) => {
+    async (session: Session, text: string, language?: string) => {
       if (!isCurrent(session)) return
       setPhase('speaking')
-      await session.player.speak(text)
+      await session.player.speak(text, language)
     },
     [isCurrent],
   )
@@ -93,11 +96,11 @@ export function useAssistant(firstName: string): UseAssistant {
       session.history.push({ role: 'user', content: text })
       setPhase('thinking')
       try {
-        const reply = await askAssistant(session.history.slice(-HISTORY_TURNS))
+        const reply = await askAssistant(session.history.slice(-HISTORY_TURNS), session.conversationId, readSpokenLanguage())
         if (!isCurrent(session)) return
         session.history.push({ role: 'assistant', content: reply.reply, actions: reply.actions })
         addLine('assistant', reply.reply, reply.actions)
-        await speakReply(session, reply.reply)
+        await speakReply(session, reply.reply, reply.speechLanguage)
       } catch (err) {
         if (!isCurrent(session)) return
         if (err instanceof ApiRequestError && err.status === 401) void authClient.signOut()
@@ -117,17 +120,8 @@ export function useAssistant(firstName: string): UseAssistant {
     async (session: Session, utterance: Utterance) => {
       setPhase('thinking')
       try {
-        const parts = await Promise.all(
-          utterance.segments.map((clip) =>
-            transcribeAudio(clip, utterance.mimeType, true).catch((err: unknown) => {
-              // Silence in a segment is normal, not a failure.
-              if (err instanceof ApiRequestError && err.status === 422) return ''
-              throw err
-            }),
-          ),
-        )
+        const text = await transcribeRecording(utterance.segments, utterance.mimeType, readSpokenLanguage(), true)
         if (!isCurrent(session)) return
-        const text = parts.join(' ').trim()
         if (text) {
           setError(null)
           await respond(session, text)
@@ -183,7 +177,7 @@ export function useAssistant(firstName: string): UseAssistant {
       return
     }
 
-    session = { id: Date.now(), listener, player, lock, history: [] }
+    session = { id: Date.now(), conversationId: crypto.randomUUID(), listener, player, lock, history: [] }
     sessionRef.current = session
     void lock.enable()
     // In the Android app this keeps the microphone alive with the screen off; in a browser it does nothing.

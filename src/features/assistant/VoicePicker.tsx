@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Volume2 } from 'lucide-react'
 import type { AssistantVoice } from '../../types/assistant'
+import { SpokenLanguageSelect } from '../language/LanguageSelect'
 import { SpeechPlayer } from './speech'
 import { VOICE_OPTIONS, readStoredVoice, writeStoredVoice } from './voice'
 
@@ -30,7 +31,9 @@ export function VoicePicker() {
   }
 
   return (
-    <div className="surface flex w-full max-w-md flex-col gap-2 p-4 text-left sm:flex-row sm:items-end">
+    <div className="surface flex w-full max-w-md flex-col gap-3 p-4 text-left">
+      <SpokenLanguageSelect id="assistant-spoken-language" />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
       <div className="flex-1">
         <label htmlFor="assistant-voice" className="mb-1.5 block text-sm font-semibold">
           Apex's voice
@@ -47,6 +50,7 @@ export function VoicePicker() {
         <Volume2 className="size-4" aria-hidden="true" />
         {playing ? 'Playing…' : 'Hear it'}
       </button>
+      </div>
     </div>
   )
 }

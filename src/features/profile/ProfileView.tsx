@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { buildSignature, profileFromUser } from '../../lib/profile'
+import { SubscriptionSection } from '../subscription/SubscriptionSection'
+import { CalendarConnect } from './CalendarConnect'
 import { authClient } from '../../lib/auth-client'
 import { PROFILE_LIMITS, type Profile, type ProfileSource } from '../../types/profile'
 
@@ -17,9 +19,11 @@ interface TextFieldProps {
   required?: boolean
   type?: string
   autoComplete?: string
+  /** A short line of help under the field. */
+  hint?: string
 }
 
-function TextField({ id, label, value, max, onChange, required, type = 'text', autoComplete }: TextFieldProps) {
+function TextField({ id, label, value, max, onChange, required, type = 'text', autoComplete, hint }: TextFieldProps) {
   return (
     <div>
       <label htmlFor={id} className="mb-1.5 block text-sm font-semibold">
@@ -33,8 +37,14 @@ function TextField({ id, label, value, max, onChange, required, type = 'text', a
         required={required}
         autoComplete={autoComplete}
         onChange={(e) => onChange(e.target.value)}
+        aria-describedby={hint ? `${id}-hint` : undefined}
         className={fieldClass}
       />
+      {hint && (
+        <p id={`${id}-hint`} className="muted mt-1 text-xs">
+          {hint}
+        </p>
+      )}
     </div>
   )
 }
@@ -47,6 +57,19 @@ function ProfileForm({ initial }: { initial: Profile }) {
   const set = (field: keyof Profile) => (value: string) => {
     setProfile((current) => ({ ...current, [field]: value }))
     setSave({ kind: 'idle' })
+  }
+
+  /** Saves the profile with a new calendar address ("" disconnects). Returns whether it worked. */
+  const saveCalendar = async (calendarUrl: string): Promise<boolean> => {
+    const next = profileFromUser({ ...profile, calendarUrl })
+    try {
+      const { error } = await authClient.updateUser(next)
+      if (error) return false
+      setProfile(next)
+      return true
+    } catch {
+      return false
+    }
   }
 
   const handleSubmit = async (event: FormEvent) => {
@@ -79,7 +102,8 @@ function ProfileForm({ initial }: { initial: Profile }) {
       />
       <TextField
         id="profile-business"
-        label="Business name"
+        label="Business name (optional)"
+        hint="Not a business? Leave this blank and Apex will sign off with just your name."
         value={profile.businessName}
         max={PROFILE_LIMITS.businessName}
         onChange={set('businessName')}
@@ -87,7 +111,7 @@ function ProfileForm({ initial }: { initial: Profile }) {
       />
       <TextField
         id="profile-role"
-        label="Role or title"
+        label="Role or title (optional)"
         value={profile.role}
         max={PROFILE_LIMITS.role}
         onChange={set('role')}
@@ -103,28 +127,7 @@ function ProfileForm({ initial }: { initial: Profile }) {
         autoComplete="tel"
       />
 
-      <div>
-        <label htmlFor="profile-calendar" className="mb-1.5 block text-sm font-semibold">
-          Calendar link <span className="muted font-normal">(optional)</span>
-        </label>
-        <input
-          id="profile-calendar"
-          type="url"
-          inputMode="url"
-          value={profile.calendarUrl}
-          maxLength={PROFILE_LIMITS.calendarUrl}
-          onChange={(e) => set('calendarUrl')(e.target.value)}
-          placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"
-          autoComplete="off"
-          aria-describedby="profile-calendar-hint"
-          className="field"
-        />
-        <p id="profile-calendar-hint" className="muted mt-1 text-xs">
-          Paste your calendar's private iCal address so the assistant knows your meetings. Apex only reads it. In Google
-          Calendar: Settings, your calendar, "Secret address in iCal format". Outlook and Apple calendars have a similar
-          "publish" or "share" link. Treat it like a password.
-        </p>
-      </div>
+      <CalendarConnect url={profile.calendarUrl} onChange={saveCalendar} />
 
       <div>
         <label htmlFor="profile-signature" className="mb-1.5 block text-sm font-semibold">
@@ -171,7 +174,13 @@ function ProfileForm({ initial }: { initial: Profile }) {
   )
 }
 
-export function ProfileView({ user }: { user: ProfileSource & { id: string; email: string } }) {
+interface ProfileViewProps {
+  user: ProfileSource & { id: string; email: string }
+  /** The subscription preview is only released to some accounts. */
+  showSubscriptions: boolean
+}
+
+export function ProfileView({ user, showSubscriptions }: ProfileViewProps) {
   return (
     <section aria-labelledby="profile-heading">
       <h1 id="profile-heading" className="text-3xl font-extrabold tracking-tight">
@@ -182,6 +191,7 @@ export function ProfileView({ user }: { user: ProfileSource & { id: string; emai
         <span className="font-semibold">{user.email}</span>.
       </p>
       <ProfileForm key={user.id} initial={profileFromUser(user)} />
+      {showSubscriptions && <SubscriptionSection />}
     </section>
   )
 }

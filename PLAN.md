@@ -28,6 +28,16 @@
 - [x] A5. Groq accepts the Orpheus terms (console), then tune the voice and reply speed on the live site
 - [x] A6. Android app (Capacitor shell, foreground microphone service, signed release APK); iPhone stays on the web app
 
+## Round 3 (2026-10-26)
+- [x] B1. Diana as the default voice; business name optional
+- [x] B2. "Send at" reminders, To send / Sent filter, planned sends on the agenda, assistant tool schedule_send
+- [x] B3. Assistant conversation history (Conversations tab)
+- [x] B4. Calendar pop-up for Google / Outlook / Apple with paste and test
+- [x] B5. Recordings up to 5 minutes; spoken and written language settings (Afrikaans, Spanish, others, translation)
+- [x] B6. Subscriptions preview (owner account only) with live exchange rates
+- [ ] B7. Real billing provider (needs a decision: Paystack, Stripe or PayFast) and per-plan limits
+- [ ] B8. One-tap calendar sign-in with Google or Microsoft (needs OAuth credentials)
+
 ## Phase 2
 - Send from inside Apex (Gmail API as the user, or Resend free tier with reply-to)
 - Offline queue, re-generate with a different tone, team or shared business profiles

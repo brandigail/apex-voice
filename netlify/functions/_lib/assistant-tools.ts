@@ -2,6 +2,7 @@ import { neon } from '@neondatabase/serverless'
 import { z } from 'zod'
 import type { AssistantAction } from '../../../src/types/assistant.ts'
 import { DRAFT_CATEGORIES, type DraftCategory } from '../../../src/types/draft.ts'
+import { LANGUAGES, languageName } from '../../../src/types/languages.ts'
 import type { Profile } from '../../../src/types/profile.ts'
 import { buildSignature } from '../../../src/lib/profile.ts'
 import { addAgendaItem, listAgenda } from './agenda.ts'
@@ -18,6 +19,10 @@ export interface ToolContext {
   deadlineAt: number
   /** Appended to as tools change things, so the screen can show what happened. */
   actions: AssistantAction[]
+  /** The language being spoken (or "auto"), passed on so drafts written for the user follow it. */
+  spokenLanguage?: string
+  /** Set when a draft that is not in English is read out, so the client picks a matching voice. */
+  speechLanguage?: string
 }
 
 const MAX_RANGE_DAYS = 31
@@ -96,8 +101,29 @@ export const TOOLS: ToolDefinition[] = [
         properties: {
           category: { type: 'string', enum: CATEGORY_ENUM },
           instruction: { type: 'string', description: 'Everything the user said about who it is for and what it should say.' },
+          language: {
+            type: 'string',
+            enum: LANGUAGES.map((l) => l.code),
+            description: 'Only if the user asked for a specific language, for example a translation. Leave out to write in the language they spoke.',
+          },
         },
         required: ['category', 'instruction'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'schedule_send',
+      description:
+        "Plan when a draft should be sent (a reminder on the agenda; nothing is sent automatically). Use it when the user says to send something at a certain time. Use 'clear' to remove the plan.",
+      parameters: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          when: { type: 'string', description: "Local time YYYY-MM-DDTHH:mm in the user's time zone, or 'clear'." },
+        },
+        required: ['id', 'when'],
       },
     },
   },
@@ -128,7 +154,12 @@ const findDraftsArgs = z.object({
   status: z.enum(['sent', 'unsent', 'any']).optional(),
 })
 const idArgs = z.object({ id: z.uuid() })
-const createDraftArgs = z.object({ category: z.enum(DRAFT_CATEGORIES), instruction: z.string().trim().min(1).max(4000) })
+const createDraftArgs = z.object({
+  category: z.enum(DRAFT_CATEGORIES),
+  instruction: z.string().trim().min(1).max(4000),
+  language: z.string().optional(),
+})
+const scheduleSendArgs = z.object({ id: z.uuid(), when: z.string() })
 const markSentArgs = z.object({ id: z.uuid(), sent: z.boolean() })
 
 interface DraftRow {
@@ -139,6 +170,8 @@ interface DraftRow {
   body: string
   created_at: string | Date
   sent_at: string | Date | null
+  send_at?: string | Date | null
+  language?: string
 }
 
 const fail = (message: string) => JSON.stringify({ error: message })
@@ -197,7 +230,7 @@ async function findDrafts(args: unknown, ctx: ToolContext): Promise<string> {
   const { query, category, status = 'any' } = parsed.data
   const sql = neon(process.env.DATABASE_URL ?? '')
   const rows = (await sql.query(
-    `SELECT id, category, recipient, subject, body, created_at, sent_at FROM drafts
+    `SELECT id, category, recipient, subject, body, created_at, sent_at, send_at, language FROM drafts
      WHERE user_id = $1
        AND ($2::text IS NULL OR category = $2)
        AND ($3::text IS NULL OR recipient ILIKE '%' || $3 || '%' OR subject ILIKE '%' || $3 || '%' OR body ILIKE '%' || $3 || '%')
@@ -215,6 +248,8 @@ async function findDrafts(args: unknown, ctx: ToolContext): Promise<string> {
       preview: row.body.slice(0, PREVIEW_CHARS),
       written: formatWhen(new Date(row.created_at).toISOString(), ctx.timeZone, false),
       sent: row.sent_at ? `yes, marked sent ${formatWhen(new Date(row.sent_at).toISOString(), ctx.timeZone, false)}` : 'no, still a draft',
+      planned_send: row.send_at && !row.sent_at ? formatWhen(new Date(row.send_at).toISOString(), ctx.timeZone, false) : undefined,
+      language: row.language,
     })),
   })
 }
@@ -224,23 +259,33 @@ async function getDraft(args: unknown, ctx: ToolContext): Promise<string> {
   if (!parsed.success) return fail('Give the draft id.')
   const sql = neon(process.env.DATABASE_URL ?? '')
   const [row] = (await sql.query(
-    'SELECT id, category, recipient, subject, body, created_at, sent_at FROM drafts WHERE id = $1 AND user_id = $2',
+    'SELECT id, category, recipient, subject, body, created_at, sent_at, language FROM drafts WHERE id = $1 AND user_id = $2',
     [parsed.data.id, ctx.userId],
   )) as DraftRow[]
   if (!row) return fail('That draft was not found.')
   // The signature is for the page, not for a voice to read out.
   const signature = buildSignature(ctx.profile)
   const body = signature && row.body.endsWith(signature) ? row.body.slice(0, -signature.length).trimEnd() : row.body
-  return JSON.stringify({ kind: row.category, recipient: row.recipient, subject: row.subject, body })
+  // A voice that only speaks English would butcher an Afrikaans or Spanish draft, so tell the client which language this is.
+  if (row.language && row.language !== 'en') ctx.speechLanguage = row.language
+  return JSON.stringify({ kind: row.category, recipient: row.recipient, subject: row.subject, body, language: row.language })
 }
 
 async function createDraft(args: unknown, ctx: ToolContext): Promise<string> {
   const parsed = createDraftArgs.safeParse(args)
   if (!parsed.success) return fail('Give a category and the instruction.')
-  const { category, instruction } = parsed.data
+  const { category, instruction, language } = parsed.data
 
   const remaining = ctx.deadlineAt - Date.now()
-  const result = await writeDraft({ apiKey: ctx.apiKey, category, transcript: instruction, profile: ctx.profile, deadlineMs: remaining })
+  const result = await writeDraft({
+    apiKey: ctx.apiKey,
+    category,
+    transcript: instruction,
+    profile: ctx.profile,
+    deadlineMs: remaining,
+    writeLanguage: language,
+    spokenLanguage: ctx.spokenLanguage,
+  })
   if (!result.ok) return fail(result.message)
 
   const { draft } = result
@@ -248,13 +293,41 @@ async function createDraft(args: unknown, ctx: ToolContext): Promise<string> {
   const [{ total }] = (await sql.query('SELECT count(*)::int AS total FROM drafts WHERE user_id = $1', [ctx.userId])) as { total: number }[]
   if (total >= 500) return fail('The user already has 500 drafts, so nothing was saved. Ask them to delete some.')
   const [saved] = (await sql.query(
-    `INSERT INTO drafts (user_id, category, recipient, subject, body, transcript)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-    [ctx.userId, draft.category, draft.recipient, draft.subject, draft.body, instruction],
+    `INSERT INTO drafts (user_id, category, recipient, subject, body, transcript, language)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+    [ctx.userId, draft.category, draft.recipient, draft.subject, draft.body, instruction, draft.language],
   )) as { id: string }[]
 
   ctx.actions.push({ type: 'draft_created', id: saved.id, category: draft.category, label: label(draft) })
-  return JSON.stringify({ saved: true, id: saved.id, kind: draft.category, recipient: draft.recipient, subject: draft.subject, body: draft.body })
+  return JSON.stringify({
+    saved: true,
+    id: saved.id,
+    kind: draft.category,
+    recipient: draft.recipient,
+    subject: draft.subject,
+    body: draft.body,
+    language: languageName(draft.language),
+  })
+}
+
+async function scheduleSend(args: unknown, ctx: ToolContext): Promise<string> {
+  const parsed = scheduleSendArgs.safeParse(args)
+  if (!parsed.success) return fail('Give the draft id and when, as YYYY-MM-DDTHH:mm or clear.')
+  const clear = parsed.data.when.trim().toLowerCase() === 'clear'
+  const at = clear ? null : zonedToDate(parsed.data.when, ctx.timeZone)
+  if (!clear && !at) return fail('The time was not valid. Use YYYY-MM-DDTHH:mm.')
+
+  const sql = neon(process.env.DATABASE_URL ?? '')
+  const [row] = (await sql.query(
+    `UPDATE drafts SET send_at = $3, updated_at = now() WHERE id = $1 AND user_id = $2
+     RETURNING id, category, recipient, subject`,
+    [parsed.data.id, ctx.userId, at?.toISOString() ?? null],
+  )) as Pick<DraftRow, 'id' | 'category' | 'recipient' | 'subject'>[]
+  if (!row) return fail('That draft was not found.')
+  if (!at) return JSON.stringify({ cleared: true })
+  const when = formatWhen(at.toISOString(), ctx.timeZone, false)
+  ctx.actions.push({ type: 'send_scheduled', id: row.id, label: `${label(row)} at ${when}` })
+  return JSON.stringify({ planned: true, when })
 }
 
 async function markSent(args: unknown, ctx: ToolContext): Promise<string> {
@@ -291,6 +364,8 @@ export async function runTool(name: string, rawArguments: string, ctx: ToolConte
         return await getDraft(args, ctx)
       case 'create_draft':
         return await createDraft(args, ctx)
+      case 'schedule_send':
+        return await scheduleSend(args, ctx)
       case 'mark_sent':
         return await markSent(args, ctx)
       default:

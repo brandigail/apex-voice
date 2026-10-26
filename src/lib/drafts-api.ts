@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { Draft, SaveDraftInput } from '../types/draft'
+import type { Draft, DraftStatusUpdate, SaveDraftInput } from '../types/draft'
 import { draftSchema } from '../types/draft-schema'
 import { ApiRequestError, request } from './api'
 
@@ -27,18 +27,21 @@ export async function saveDraft(draft: SaveDraftInput): Promise<Draft> {
   return data.data.draft
 }
 
-/** Records that the user sent the draft (or takes that back). */
-export async function markDraftSent(id: string, sent: boolean): Promise<Draft> {
+/** Marks the draft as sent (or not) and/or plans when to send it. Anything left out is unchanged. */
+export async function updateDraftStatus(id: string, update: DraftStatusUpdate): Promise<Draft> {
   const data = saveResponseSchema.safeParse(
     await request(`/api/drafts/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sent }),
+      body: JSON.stringify(update),
     }),
   )
   if (!data.success) throw unexpected()
   return data.data.draft
 }
+
+/** Records that the user sent the draft (or takes that back). */
+export const markDraftSent = (id: string, sent: boolean) => updateDraftStatus(id, { sent })
 
 export async function deleteDraft(id: string): Promise<void> {
   await request(`/api/drafts/${id}`, { method: 'DELETE' })

@@ -1,6 +1,7 @@
 import { AlertCircle, RotateCcw, Sparkles } from 'lucide-react'
 import { ChannelIcon } from '../../components/ChannelIcon'
 import { channelFor } from '../../lib/channels'
+import { SpokenLanguageSelect, WriteLanguageSelect } from '../language/LanguageSelect'
 import { ChannelPicker } from './ChannelPicker'
 import { DraftCard } from './DraftCard'
 import { RecordButton, type RecordButtonMode } from './RecordButton'
@@ -85,9 +86,16 @@ export function RecordView() {
               <p className="muted -mt-2 text-sm">
                 {requesting
                   ? 'Allow microphone access to begin.'
-                  : `Tap to record for ${channel.label}. Up to ${MAX_RECORDING_SECONDS} seconds.`}
+                  : `Tap to record for ${channel.label}. Up to ${MAX_RECORDING_SECONDS / 60} minutes.`}
               </p>
             )
+          )}
+
+          {choosing && (
+            <div className="surface flex w-full flex-col gap-3 p-4 sm:flex-row">
+              <SpokenLanguageSelect id="record-spoken-language" />
+              <WriteLanguageSelect id="record-write-language" />
+            </div>
           )}
         </>
       )}

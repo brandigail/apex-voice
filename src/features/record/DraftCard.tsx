@@ -13,7 +13,9 @@ import {
 } from '../../lib/share'
 import type { GeneratedDraft } from '../../types/draft'
 import type { SaveStatus } from './useDraftAutosave'
-import { markDraftSent } from '../../lib/drafts-api'
+import { updateDraftStatus } from '../../lib/drafts-api'
+import { languageName } from '../../types/languages'
+import { SendAtField } from '../history/SendAtField'
 import { useEmailProvider } from './useEmailProvider'
 import type { VoiceNoteResult } from './useVoiceNote'
 
@@ -39,6 +41,7 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
   const channel = channelFor(draft.category)
   const [copyState, setCopyState] = useState<CopyState>('idle')
   const [sent, setSent] = useState(false)
+  const [sendAt, setSendAt] = useState<string | null>(null)
   const resetTimer = useRef<number | null>(null)
   const [emailProvider, setEmailProvider] = useEmailProvider()
   const providerLabel = EMAIL_PROVIDERS.find((p) => p.id === emailProvider)?.label ?? 'mail'
@@ -73,9 +76,20 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
     const next = !sent
     setSent(next)
     try {
-      await markDraftSent(result.id, next)
+      await updateDraftStatus(result.id, { sent: next })
     } catch {
       setSent(!next)
+    }
+  }
+
+  /** Plans when this will be sent; it then appears on the agenda until it is marked as sent. */
+  const handleSendAt = async (next: string | null) => {
+    const previous = sendAt
+    setSendAt(next)
+    try {
+      await updateDraftStatus(result.id, { sendAt: next })
+    } catch {
+      setSendAt(previous)
     }
   }
 
@@ -114,7 +128,14 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
             <ChannelIcon category={draft.category} className="size-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg leading-tight font-bold">Your {channel.label} draft</h2>
+            <h2 className="text-lg leading-tight font-bold">
+              Your {channel.label} draft
+              {draft.language !== 'en' && (
+                <span className="ml-2 rounded-full bg-sky-500/15 px-2 py-0.5 align-middle text-xs font-semibold text-sky-500">
+                  {languageName(draft.language)}
+                </span>
+              )}
+            </h2>
             <p role="status" aria-live="polite" className={`text-xs ${saveStatus === 'error' ? 'text-red-500' : 'muted'}`}>
               {SAVE_LABEL[saveStatus] || 'Edit anything before you send'}
             </p>
@@ -178,6 +199,8 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
               className="field resize-y leading-relaxed"
             />
           </div>
+
+          <SendAtField id="draft-send-at" value={sendAt} sent={sent} disabled={saveStatus !== 'saved'} onChange={(next) => void handleSendAt(next)} />
 
           {isMail && (
             <div>
