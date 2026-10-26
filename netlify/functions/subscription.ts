@@ -138,6 +138,13 @@ async function cancel(sql: NeonQueryFunction<false, false>, userId: string, conf
   if (!row) return errorResponse(404, 'You have no active subscription.')
   if (!row.pf_token) return errorResponse(409, 'This subscription has no PayFast token yet. Try again in a minute.')
 
+  // The shared test merchant can't authorise API calls (its passphrase isn't known), so in that test setup the
+  // subscription is only closed here. With a merchant of your own, PayFast is always told.
+  if (!config.signRequests) {
+    await sql.query("UPDATE subscriptions SET status = 'cancelled', updated_at = now() WHERE user_id = $1", [userId])
+    return json({ cancelled: true, localOnly: true })
+  }
+
   const url = `${config.apiUrl}/subscriptions/${encodeURIComponent(row.pf_token)}/cancel${config.live ? '' : '?testing=true'}`
   const response = await fetch(url, { method: 'PUT', headers: apiHeaders(config), signal: AbortSignal.timeout(8_000) })
   if (!response.ok) {

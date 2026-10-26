@@ -20,7 +20,7 @@ Talk to your business. Apex Voice turns a spoken note into a finished email, quo
 - Recordings up to 5 minutes (cut into 45 second clips, transcribed in parallel and joined), and any spoken language Whisper supports: Afrikaans, Spanish and more. A message can be spoken in one language and written in another (translation), with a matching sign-off
 - "Send at" reminders: drafts can wait for the right time, appear on the agenda when due, and the history has a "To send" list; every assistant conversation is saved and listed by date
 - Guided calendar linking (Google, Outlook, Apple) with a one-tap paste and a test before saving
-- A subscription preview (plans, live currency conversion) that is switched on per account with the `FEATURE_SUBSCRIPTIONS` setting
+- A subscription preview, switched on per account with `FEATURE_SUBSCRIPTIONS`: plans with live currency conversion and PayFast checkout (sandbox by default), payment confirmation via PayFast's signed notifications, cancel, and a confirmation email
 - Per-user rate limits and daily quotas, with a tighter cap for the assistant, to protect the free Groq quota
 
 ## Stack

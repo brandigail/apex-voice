@@ -35,7 +35,8 @@
 - [x] B4. Calendar pop-up for Google / Outlook / Apple with paste and test
 - [x] B5. Recordings up to 5 minutes; spoken and written language settings (Afrikaans, Spanish, others, translation)
 - [x] B6. Subscriptions preview (owner account only) with live exchange rates
-- [ ] B7. Real billing provider (needs a decision: Paystack, Stripe or PayFast) and per-plan limits
+- [x] B7a. PayFast sandbox: signed checkout, payment notifications (ITN), subscription status, cancel, confirmation email (needs RESEND_API_KEY)
+- [ ] B7b. Own PayFast sandbox merchant (signing and cancel through PayFast), then live merchant, privacy / terms / refund pages, per-plan limits
 - [ ] B8. One-tap calendar sign-in with Google or Microsoft (needs OAuth credentials)
 
 ## Phase 2
