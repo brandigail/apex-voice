@@ -50,11 +50,51 @@ async function download(start: URL): Promise<string> {
   throw new Error('too many redirects')
 }
 
+const pad = (n: number) => String(n).padStart(2, '0')
+const MIN_WHOLE_DAY_MS = 20 * 60 * 60 * 1000
+
+/** The wall-clock date and time of an instant in a given time zone. */
+function wallClock(date: Date, timeZone: string): { year: number; month: number; day: number; hour: number; minute: number } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).formatToParts(date)
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value)
+  return { year: get('year'), month: get('month'), day: get('day'), hour: get('hour'), minute: get('minute') }
+}
+
+/**
+ * Birthdays are often saved as a timed event that runs from midnight for most of the day, in the time zone of
+ * whoever created it. They mean "this date", so they are shown as all-day events on that date, not as an
+ * instant that could land on a different day for someone in another time zone.
+ */
+function isWholeDayInZone(start: Date, end: Date | null, timeZone: string | undefined): boolean {
+  if (!timeZone || !end || end.getTime() - start.getTime() < MIN_WHOLE_DAY_MS) return false
+  try {
+    const { hour, minute } = wallClock(start, timeZone)
+    return hour === 0 && minute === 0
+  } catch {
+    return false
+  }
+}
+
 function toItem(event: VEvent, start: Date, end: Date | null, uid: string): AgendaItem {
-  const allDay = event.datetype === 'date'
+  const timeZone = (event.start as Date & { tz?: string }).tz
+  const wholeDay = event.datetype !== 'date' && isWholeDayInZone(start, end, timeZone)
+  const allDay = event.datetype === 'date' || wholeDay
   // All-day events are dates, not instants: keep the calendar date and ignore the server's time zone.
-  const pad = (n: number) => String(n).padStart(2, '0')
-  const dateOnly = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T00:00:00.000Z`
+  const dateOnly = (d: Date) => {
+    if (wholeDay && timeZone) {
+      const { year, month, day } = wallClock(d, timeZone)
+      return `${year}-${pad(month)}-${pad(day)}T00:00:00.000Z`
+    }
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T00:00:00.000Z`
+  }
   return {
     id: `cal-${uid}-${start.getTime()}`,
     title: typeof event.summary === 'string' && event.summary.trim() ? event.summary.trim() : 'Busy',
@@ -86,6 +126,33 @@ function expand(event: VEvent, from: Date, to: Date): AgendaItem[] {
     .slice(0, MAX_OCCURRENCES)
     .filter((start) => !skipped.has(start.getTime()))
     .map((start) => toItem(event, start, finish(start), uid))
+}
+
+/**
+ * Google exports "repeats every year" birthdays as FREQ=YEARLY with a day of the month but no month. Read strictly,
+ * that means the 14th of EVERY month, yet Google itself (and the person who made the event) means once a year, in
+ * the month the event starts. Add that month so Apex agrees with Google.
+ */
+function withYearlyMonth(text: string): string {
+  return text.replace(/BEGIN:VEVENT[\s\S]*?END:VEVENT/g, (block) => {
+    const unfolded = block.replace(/\r?\n[ \t]/g, '')
+    const rule = /^RRULE:(.*)$/m.exec(unfolded)?.[1]?.trim()
+    const startMonth = /^DTSTART[^:\r\n]*:\d{4}(\d{2})\d{2}/m.exec(unfolded)?.[1]
+    if (!rule || !startMonth) return block
+    const yearlyByDayOfMonth = /FREQ=YEARLY/.test(rule) && /BYMONTHDAY=/.test(rule) && !/BYMONTH=|BYYEARDAY=|BYWEEKNO=|BYDAY=/.test(rule)
+    return yearlyByDayOfMonth ? unfolded.replace(rule, `${rule};BYMONTH=${Number(startMonth)}`) : block
+  })
+}
+
+/** The same title on the same day twice (a duplicated event in the calendar) is shown once. */
+function withoutDuplicates(items: AgendaItem[]): AgendaItem[] {
+  const seen = new Set<string>()
+  return items.filter((item) => {
+    const key = `${item.title.trim().toLowerCase()}|${item.allDay ? item.startsAt.slice(0, 10) : item.startsAt}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 const GOOGLE_HINT =
@@ -135,10 +202,10 @@ export async function readCalendar(rawUrl: string, from: Date, to: Date): Promis
     }
 
     const items: AgendaItem[] = []
-    for (const component of Object.values(ical.sync.parseICS(text))) {
+    for (const component of Object.values(ical.sync.parseICS(withYearlyMonth(text)))) {
       if (component?.type === 'VEVENT' && component.status !== 'CANCELLED') items.push(...expand(component, from, to))
     }
-    return { ok: true, items }
+    return { ok: true, items: withoutDuplicates(items) }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('Calendar read failed:', message)
