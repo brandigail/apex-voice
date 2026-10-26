@@ -17,10 +17,6 @@ export interface RatesResponse {
   source: string
 }
 
-export interface PlanChoice {
-  plan: PlanId
-  currency: string
-}
 
 export interface Currency {
   code: string

@@ -11,7 +11,8 @@ import { authClient } from './lib/auth-client'
 import { useFeatures } from './lib/useFeatures'
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>('record')
+  // Coming back from PayFast lands on the profile, where the subscription is shown.
+  const [tab, setTab] = useState<Tab>(() => (new URLSearchParams(window.location.search).has('payment') ? 'profile' : 'record'))
   const { data: session, isPending } = authClient.useSession()
   const features = useFeatures(Boolean(session))
 
