@@ -13,8 +13,8 @@
 - [x] 11. Profile and sign-off: display name, business name, role, phone, signature; settings screen; `generate` writes drafts in the user's name and sign-off
 - [x] 12. Per-user rate limiting and daily quota on `transcribe` and `generate` (sign-up is open, so protect the Groq quota)
 - [x] 13. `netlify/functions/db-sync.ts` (list, upsert, delete, scoped to the signed-in user) and a client sync layer
-- [ ] 14. Draft history screen with search and category filter
-- [ ] 15. PWA: manifest, icons in `/public`, `vite-plugin-pwa` prompt-for-update banner, offline shell
+- [x] 14. Draft history screen with search and category filter
+- [x] 15. PWA: manifest, icons in `/public`, `vite-plugin-pwa` prompt-for-update banner, offline shell
 - [ ] 16. Test the full flow on desktop Chrome and a real phone (iOS Safari and Android Chrome)
 - [ ] 17. Build, lint and `tsc --noEmit` clean; no console errors
 - [ ] 18. README (pitch, architecture diagram, features, recruiter demo bullets)

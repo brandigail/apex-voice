@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, Copy, Mail, MessageSquare } from 'lucide-react'
-import { EMAIL_PROVIDERS, buildEmailUrl, buildSmsUrl, draftToText, type EmailProvider } from '../../lib/share'
+import { Check, Copy, Mail, MessageCircle, MessageSquare, Share2 } from 'lucide-react'
+import {
+  EMAIL_PROVIDERS,
+  buildEmailUrl,
+  buildSmsUrl,
+  buildWhatsAppUrl,
+  draftToText,
+  type EmailProvider,
+} from '../../lib/share'
 import { DRAFT_CATEGORIES, type DraftCategory, type GeneratedDraft } from '../../types/draft'
 import type { SaveStatus } from './useDraftAutosave'
 import { useEmailProvider } from './useEmailProvider'
@@ -61,6 +68,17 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
     }
     if (resetTimer.current !== null) window.clearTimeout(resetTimer.current)
     resetTimer.current = window.setTimeout(() => setCopyState('idle'), 2000)
+  }
+
+  const canNativeShare = typeof navigator.share === 'function'
+
+  /** Opens the device share sheet, which lists every installed mail, chat and notes app. */
+  const handleShare = async () => {
+    try {
+      await navigator.share({ title: draft.subject || undefined, text: draftToText(draft) })
+    } catch {
+      // dismissed by the user, or sharing isn't allowed right now
+    }
   }
 
   return (
@@ -184,6 +202,29 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
               <MessageSquare className="size-4" aria-hidden="true" />
               Open in messages
             </a>
+          )}
+          {draft.category !== 'NOTE' && (
+            <a
+              href={canSend ? buildWhatsAppUrl(draft) : undefined}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-disabled={!canSend}
+              className={`${actionClass} border border-slate-300 hover:bg-slate-100 aria-disabled:opacity-60 dark:border-slate-700 dark:hover:bg-slate-800`}
+            >
+              <MessageCircle className="size-4" aria-hidden="true" />
+              WhatsApp
+            </a>
+          )}
+          {canNativeShare && (
+            <button
+              type="button"
+              onClick={() => void handleShare()}
+              disabled={!canSend}
+              className={`${actionClass} border border-slate-300 hover:bg-slate-100 disabled:opacity-60 dark:border-slate-700 dark:hover:bg-slate-800`}
+            >
+              <Share2 className="size-4" aria-hidden="true" />
+              Share…
+            </button>
           )}
         </div>
       </div>

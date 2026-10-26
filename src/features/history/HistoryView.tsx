@@ -1,9 +1,26 @@
+import { useMemo, useState } from 'react'
 import { AlertCircle, RotateCcw } from 'lucide-react'
+import type { DraftCategory } from '../../types/draft'
 import { DraftListItem } from './DraftListItem'
+import { HistoryFilters } from './HistoryFilters'
 import { useDrafts } from './useDrafts'
 
 export function HistoryView() {
   const { drafts, status, error, reload, remove } = useDrafts()
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState<DraftCategory | 'ALL'>('ALL')
+
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase()
+    return drafts.filter(
+      (draft) =>
+        (category === 'ALL' || draft.category === category) &&
+        (needle === '' ||
+          [draft.recipient, draft.subject, draft.body, draft.transcript].some((field) =>
+            field.toLowerCase().includes(needle),
+          )),
+    )
+  }, [drafts, query, category])
 
   return (
     <section aria-labelledby="history-heading">
@@ -46,8 +63,16 @@ export function HistoryView() {
       )}
 
       {drafts.length > 0 && (
+        <HistoryFilters query={query} onQuery={setQuery} category={category} onCategory={setCategory} />
+      )}
+
+      {drafts.length > 0 && visible.length === 0 && (
+        <p className="mt-4 text-slate-600 dark:text-slate-400">No drafts match your search.</p>
+      )}
+
+      {visible.length > 0 && (
         <ul className="mt-4 flex flex-col gap-3">
-          {drafts.map((draft) => (
+          {visible.map((draft) => (
             <DraftListItem key={draft.id} draft={draft} onDelete={remove} />
           ))}
         </ul>
