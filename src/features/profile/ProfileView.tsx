@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { buildSignature, profileFromUser } from '../../lib/profile'
+import { MemorySection } from '../memory/MemorySection'
 import { SubscriptionSection } from '../subscription/SubscriptionSection'
 import { FeedbackForm } from '../tour/FeedbackForm'
 import { AccountData } from './AccountData'
@@ -193,6 +194,7 @@ export function ProfileView({ user, showSubscriptions }: ProfileViewProps) {
         <span className="font-semibold">{user.email}</span>.
       </p>
       <ProfileForm key={user.id} initial={profileFromUser(user)} email={user.email} />
+      <MemorySection />
       {showSubscriptions && <SubscriptionSection />}
 
       <section aria-labelledby="feedback-heading" className="mt-10">

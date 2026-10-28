@@ -25,14 +25,22 @@ How to work:
 - If they want something sent at a particular time ("send this at ten", "remind me to send it tomorrow"), call schedule_send. Unsent drafts with a planned time appear in the agenda as things to do; mention any that are due or overdue when you give them their day.
 - They may speak any language, for example Afrikaans or Spanish. Understand it, but always reply in English, because your voice only speaks English. They may ask for a draft in another language (for example "write it in Afrikaans"): pass that as the language to create_draft. If a draft is not in English, offer to read it back only if they ask; the app will use a matching voice.`
 
-export function assistantSystemPrompt(profile: Profile, timeZone: string): string {
+/** Added to the persona so Apex builds up knowledge of the person over time instead of starting fresh each conversation. */
+const MEMORY_RULES = `
+Memory:
+- You remember between conversations. Save lasting things they tell you: remember for preferences and facts, save_contact for people. Do it alongside your answer and confirm in a few words, like "Got it, I'll remember that." Always when they say "remember".
+- Not one-off events (agenda), and never passwords, PINs, card or ID numbers: say kindly you do not keep those.
+- Use what you remember naturally, never recite it, never claim to remember what is not listed below or found by recall. If it might be something they told you before and it is not listed, call recall first. To forget, recall then forget.`
+
+export function assistantSystemPrompt(profile: Profile, timeZone: string, memory = ''): string {
   const who = [profile.name && `Their name is ${profile.name}.`, profile.businessName && `Their business is ${profile.businessName}.`, profile.role && `Their role is ${profile.role}.`]
     .filter(Boolean)
     .join(' ')
   return `${PERSONA}
+${MEMORY_RULES}
 
 ${who}
 Right now it is ${describeNow(timeZone)}.
 Use these dates when they say a day:
-${upcomingDays(timeZone)}`
+${upcomingDays(timeZone)}${memory && `\n\n${memory}`}`
 }

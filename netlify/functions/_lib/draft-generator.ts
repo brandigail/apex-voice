@@ -44,6 +44,8 @@ export interface DraftRequest {
   /** A language code to write in, or "same" / undefined to write in the language that was spoken. */
   writeLanguage?: string
   spokenLanguage?: string
+  /** What Apex remembers that is relevant to this dictation (see loadMemoryContext), or empty. */
+  memory?: string
 }
 
 /** Turns a transcript into a validated, signed draft for one channel, retrying once if the model's JSON is invalid. */
@@ -55,10 +57,11 @@ export async function writeDraft({
   deadlineMs,
   writeLanguage,
   spokenLanguage,
+  memory,
 }: DraftRequest): Promise<DraftResult> {
   const startedAt = Date.now()
   const messages: ChatMessage[] = [
-    { role: 'system', content: systemPrompt(category, profile, writeLanguage, spokenLanguage) },
+    { role: 'system', content: systemPrompt(category, profile, writeLanguage, spokenLanguage, memory) },
     { role: 'user', content: userPrompt(transcript) },
   ]
 

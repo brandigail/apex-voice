@@ -13,6 +13,7 @@ Talk to your business. Apex Voice turns a spoken note into a finished email, quo
 - Voice to draft: Groq Whisper transcription, then Groq LLM with JSON mode validated by zod on the client and the server
 - Eight channels: email, quote, WhatsApp, SMS, Instagram, Facebook, TikTok, note
 - Voice assistant with tool calling (agenda, draft search, create draft, mark as sent), silence-based turn taking, spoken replies (Groq Orpheus) with a browser-voice fallback
+- Personal memory: the assistant remembers preferences, facts and people between conversations (`remember`, `save_contact`, `recall`, `forget` tools). Only what is relevant to each request is added to the prompt, drafts use it (a saved contact fills in the recipient's email or phone), everything is encrypted at rest, and a Profile section lets the user read, edit and delete it
 - Agenda: items added in Apex or by voice, plus a read-only link to a private iCal calendar (Google, Outlook, Apple)
 - Per-user accounts (Better Auth, email and password on Neon), profile and automatic signature, draft history with search, filter and "sent" tracking
 - Send options: default mail app, Gmail, Outlook, Yahoo, SMS, WhatsApp, device share sheet

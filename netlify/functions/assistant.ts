@@ -4,6 +4,7 @@ import { runTool, TOOLS, type ToolContext } from './_lib/assistant-tools.ts'
 import { assistantSystemPrompt } from './_lib/assistant-prompt.ts'
 import { chat, type ChatMessage } from './_lib/groq-chat.ts'
 import { errorResponse, json } from './_lib/http.ts'
+import { loadMemoryContext } from './_lib/memory-context.ts'
 import { claimQuota } from './_lib/rate-limit.ts'
 import { requireUser } from './_lib/session.ts'
 import { rememberTurn } from './_lib/conversations.ts'
@@ -66,6 +67,9 @@ const CONFIRMATIONS: Record<AssistantAction['type'], string> = {
   agenda_added: "That's on your agenda now.",
   marked_sent: "Done, I've marked that as sent.",
   send_scheduled: "I've set a reminder on your agenda.",
+  memory_saved: "Got it, I'll remember that.",
+  contact_saved: "Got it, I've saved their details.",
+  memory_forgotten: "Done, I've forgotten that.",
 }
 
 export default async function handler(req: Request): Promise<Response> {
@@ -111,7 +115,7 @@ export default async function handler(req: Request): Promise<Response> {
 
   const models = assistantModels()
   const messages: ChatMessage[] = [
-    { role: 'system', content: assistantSystemPrompt(profile, timeZone) },
+    { role: 'system', content: assistantSystemPrompt(profile, timeZone, await loadMemoryContext(session.user.id, lastUserText)) },
     ...request.data.messages.map(({ role, content, actions }): ChatMessage => {
       if (role === 'user' || !actions?.length) return { role, content }
       const done = actions.map((a) => `${a.type} id=${a.id} (${a.label})`).join('; ')
@@ -130,7 +134,9 @@ export default async function handler(req: Request): Promise<Response> {
       result = await chat(apiKey, messages, ctx.deadlineAt - Date.now(), { tools: TOOLS, temperature: 0.5, model: fallback })
     }
     if (!result.ok) {
-      if (result.status === 429) return errorResponse(429, 'The AI service is busy. Try again in a moment.')
+      // If a tool already ran, say what was done instead of an error that hides it.
+      if (result.status === 429 && ctx.actions.length === 0) return errorResponse(429, 'The AI service is busy. Try again in a moment.')
+      if (result.status === 429) break
       // The model sometimes makes a malformed tool call, which Groq rejects with 400. Asking again usually works.
       if (result.status === 400) continue
       break

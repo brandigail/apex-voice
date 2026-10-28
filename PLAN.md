@@ -39,6 +39,15 @@
 - [ ] B7b. Own PayFast sandbox merchant (signing and cancel through PayFast), then live merchant, privacy / terms / refund pages, per-plan limits
 - [ ] B8. One-tap calendar sign-in with Google or Microsoft (needs OAuth credentials)
 
+## Personal assistant memory (added 2026-10-28)
+- [x] C1. `memories` and `contacts` tables (encrypted text, per user), store, REST functions and a "What Apex knows about you" section on the Profile tab
+- [x] C2. Assistant tools `remember`, `save_contact`, `recall`, `forget`; relevant memory is added to the assistant prompt on every turn
+- [x] C3. Drafts use preferences and saved people (recipient email or phone filled in from a saved contact)
+- [ ] C4. Check on a real phone and with dad's real wording; tune the prompts
+- [ ] C5. Learn writing style from edited, sent drafts
+- [ ] C6. Morning briefing on the Assistant tab (today's meetings, overdue sends, unanswered drafts)
+- [ ] C7. Inbox awareness (blocked on the SECURITY.md gaps and two-step login)
+
 ## Phase 2
 - Send from inside Apex (Gmail API as the user, or Resend free tier with reply-to)
 - Offline queue, re-generate with a different tone, team or shared business profiles

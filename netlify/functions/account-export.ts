@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless'
 import { openText } from './_lib/crypto.ts'
 import { errorResponse } from './_lib/http.ts'
+import { listContacts, listMemories } from './_lib/memory-store.ts'
 import { claimQuota } from './_lib/rate-limit.ts'
 import { describeError } from './_lib/safe-log.ts'
 import { requireUser } from './_lib/session.ts'
@@ -46,7 +47,7 @@ export default async function handler(req: Request): Promise<Response> {
 
   try {
     const sql = neon(process.env.DATABASE_URL ?? '')
-    const [drafts, messages, agenda, feedback, subscription] = await Promise.all([
+    const [drafts, messages, agenda, feedback, subscription, memories, contacts] = await Promise.all([
       sql.query(
         'SELECT id, category, recipient, subject, body, transcript, language, created_at, sent_at, send_at FROM drafts WHERE user_id = $1 ORDER BY created_at',
         [userId],
@@ -59,6 +60,8 @@ export default async function handler(req: Request): Promise<Response> {
       sql.query('SELECT plan, status, amount_zar, last_payment_at FROM subscriptions WHERE user_id = $1', [userId]) as unknown as Promise<
         { plan: string; status: string; amount_zar: string; last_payment_at: string | Date | null }[]
       >,
+      listMemories(userId),
+      listContacts(userId),
     ])
 
     const data = {
@@ -89,6 +92,8 @@ export default async function handler(req: Request): Promise<Response> {
         starts: iso(a.starts_at),
         ends: iso(a.ends_at),
       })),
+      whatApexRemembers: memories.map((m) => ({ type: m.kind, note: m.content, savedAt: m.createdAt })),
+      peopleApexKnows: contacts.map(({ name, email, phone, relationship, notes }) => ({ name, email, phone, relationship, notes })),
       feedbackYouSent: feedback.map((f) => ({ message: f.message, screen: f.screen, at: iso(f.created_at) })),
       subscription: subscription.map((s) => ({ plan: s.plan, status: s.status, amountZar: Number(s.amount_zar), lastPaymentAt: iso(s.last_payment_at) })),
     }

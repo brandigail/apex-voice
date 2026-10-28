@@ -6,6 +6,8 @@ import { LANGUAGES, languageName } from '../../../src/types/languages.ts'
 import type { Profile } from '../../../src/types/profile.ts'
 import { buildSignature } from '../../../src/lib/profile.ts'
 import { addAgendaItem, listAgenda } from './agenda.ts'
+import { loadMemoryContext } from './memory-context.ts'
+import { MEMORY_TOOLS, runMemoryTool } from './memory-tools.ts'
 import { openText } from './crypto.ts'
 import { encryptDraftText } from './draft-store.ts'
 import { writeDraft } from './draft-generator.ts'
@@ -144,6 +146,7 @@ export const TOOLS: ToolDefinition[] = [
       },
     },
   },
+  ...MEMORY_TOOLS,
 ]
 
 const getAgendaArgs = z.object({ from_date: z.string(), to_date: z.string() })
@@ -305,6 +308,7 @@ async function createDraft(args: unknown, ctx: ToolContext): Promise<string> {
     deadlineMs: remaining,
     writeLanguage: language,
     spokenLanguage: ctx.spokenLanguage,
+    memory: await loadMemoryContext(ctx.userId, instruction),
   })
   if (!result.ok) return fail(result.message)
 
@@ -390,7 +394,7 @@ export async function runTool(name: string, rawArguments: string, ctx: ToolConte
       case 'mark_sent':
         return await markSent(args, ctx)
       default:
-        return fail(`There is no tool called ${name}.`)
+        return (await runMemoryTool(name, args, ctx)) ?? fail(`There is no tool called ${name}.`)
     }
   } catch (err) {
     console.error(`Assistant tool ${name} failed:`, describeError(err))

@@ -2,6 +2,7 @@ import type { GenerateResponse } from '../../src/types/api.ts'
 import { generateRequestSchema } from '../../src/types/draft-schema.ts'
 import { writeDraft } from './_lib/draft-generator.ts'
 import { errorResponse, json } from './_lib/http.ts'
+import { loadMemoryContext } from './_lib/memory-context.ts'
 import { claimQuota } from './_lib/rate-limit.ts'
 import { requireUser } from './_lib/session.ts'
 
@@ -41,6 +42,7 @@ export default async function handler(req: Request): Promise<Response> {
     deadlineMs: DEADLINE_MS,
     writeLanguage,
     spokenLanguage,
+    memory: await loadMemoryContext(session.user.id, transcript),
   })
   return result.ok ? json<GenerateResponse>({ draft: result.draft }) : errorResponse(result.status, result.message)
 }

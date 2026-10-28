@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { AlertCircle, BellRing, CalendarPlus, CheckCheck, FilePenLine, Sparkles, Square, Trash2 } from 'lucide-react'
+import { AlertCircle, BellRing, Brain, CalendarPlus, CheckCheck, FilePenLine, Sparkles, Square, Trash2, UserPlus } from 'lucide-react'
 import type { Tab } from '../../components/TabBar'
 import { warmUp } from '../../lib/assistant-api'
 import type { AssistantAction } from '../../types/assistant'
@@ -36,7 +36,13 @@ function ActionChip({ action, onNavigate }: { action: AssistantAction; onNavigat
         ? { icon: CalendarPlus, text: `Added: ${action.label}`, tab: 'agenda' as const }
         : action.type === 'send_scheduled'
           ? { icon: BellRing, text: `Reminder set: ${action.label}`, tab: 'agenda' as const }
-          : { icon: CheckCheck, text: `Marked sent: ${action.label}`, tab: 'history' as const }
+          : action.type === 'memory_saved'
+            ? { icon: Brain, text: `Remembered: ${action.label}`, tab: 'profile' as const }
+            : action.type === 'contact_saved'
+              ? { icon: UserPlus, text: `Saved person: ${action.label}`, tab: 'profile' as const }
+              : action.type === 'memory_forgotten'
+                ? { icon: Brain, text: `Forgot: ${action.label}`, tab: 'profile' as const }
+                : { icon: CheckCheck, text: `Marked sent: ${action.label}`, tab: 'history' as const }
   const Icon = config.icon
   return (
     <button

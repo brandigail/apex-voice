@@ -24,6 +24,9 @@ export type AssistantAction =
   | { type: 'agenda_added'; id: string; label: string }
   | { type: 'marked_sent'; id: string; label: string }
   | { type: 'send_scheduled'; id: string; label: string }
+  | { type: 'memory_saved'; id: string; label: string }
+  | { type: 'contact_saved'; id: string; label: string }
+  | { type: 'memory_forgotten'; id: string; label: string }
 
 export interface AssistantResponse {
   reply: string

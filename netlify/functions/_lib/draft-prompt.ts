@@ -79,8 +79,15 @@ export function systemPrompt(
   profile: Profile,
   writeLanguage?: string,
   spokenLanguage?: string,
+  memory = '',
 ): string {
-  return BASE_PROMPT + CHANNEL_GUIDE[category] + languageBlock(writeLanguage, spokenLanguage) + senderBlock(profile)
+  return BASE_PROMPT + CHANNEL_GUIDE[category] + languageBlock(writeLanguage, spokenLanguage) + senderBlock(profile) + memoryBlock(memory)
+}
+
+/** Remembered preferences shape the wording; a remembered person is used only when the dictation is about them. */
+function memoryBlock(memory: string): string {
+  if (!memory) return ''
+  return `\n\n${memory}\nHow to use this: follow the preferences in the way you write. Use a person's details only when the dictation is about them: write their full name as the recipient, and for an EMAIL use their email address as the recipient (for SMS or WHATSAPP their phone number) when one is saved. Use a saved fact only where it belongs, such as a standing price or term. Never add a detail the speaker did not ask for, and if the dictation disagrees with this, follow the dictation.`
 }
 
 export function userPrompt(transcript: string): string {
