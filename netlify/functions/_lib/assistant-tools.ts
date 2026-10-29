@@ -86,7 +86,7 @@ export const TOOLS: ToolDefinition[] = [
         type: 'object',
         properties: {
           query: { type: 'string', description: 'Word or name to look for in the recipient, subject or text, for example "Smith".' },
-          category: { type: 'string', enum: CATEGORY_ENUM, description: 'Only this kind of draft.' },
+          category: { type: 'string', enum: CATEGORY_ENUM, description: 'Only when the user names that exact kind ("my WhatsApps", "the quotes"). Never guess it: leave it out for "messages", "invoices", "anything" or a name.' },
           status: { type: 'string', enum: ['sent', 'unsent', 'any'], description: 'Defaults to any.' },
         },
       },
@@ -257,7 +257,8 @@ async function findDrafts(args: unknown, ctx: ToolContext): Promise<string> {
        AND ($2::text IS NULL OR category = $2)
        AND ($3 = 'any' OR ($3 = 'sent' AND sent_at IS NOT NULL) OR ($3 = 'unsent' AND sent_at IS NULL))
      ORDER BY created_at DESC LIMIT ${DRAFT_SEARCH_WINDOW}`,
-    [ctx.userId, category ?? null, status],
+    // A name or word is specific enough on its own; the model often guesses a kind to go with it and would hide the match.
+    [ctx.userId, query ? null : (category ?? null), status],
   )) as DraftRow[]
   const needle = query?.toLowerCase()
   const rows = stored

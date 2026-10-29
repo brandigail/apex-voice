@@ -17,7 +17,10 @@ import { updateDraftStatus } from '../../lib/drafts-api'
 import { reportActivity } from '../../lib/activity-api'
 import { languageName } from '../../types/languages'
 import { SendAtField } from '../history/SendAtField'
+import { ReadAloudButton } from './ReadAloudButton'
+import { SentPrompt } from './SentPrompt'
 import { useEmailProvider } from './useEmailProvider'
+import { useSendPrompt } from './useSendPrompt'
 import type { VoiceNoteResult } from './useVoiceNote'
 
 interface DraftCardProps {
@@ -43,6 +46,7 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
   const [copyState, setCopyState] = useState<CopyState>('idle')
   const [sent, setSent] = useState(false)
   const [sendAt, setSendAt] = useState<string | null>(null)
+  const sendPrompt = useSendPrompt()
   const resetTimer = useRef<number | null>(null)
   /** The text as Apex first wrote it, so the tester's own changes show how they would have said it. */
   const [original] = useState(() => ({ body: draft.body, subject: draft.subject }))
@@ -88,6 +92,19 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
     resetTimer.current = window.setTimeout(() => setCopyState('idle'), 2000)
   }
 
+  /** Answer to the pop-up shown on coming back from the mail or chat app. */
+  const confirmSent = async () => {
+    sendPrompt.close()
+    if (sent) return
+    reportAction('confirm_sent')
+    setSent(true)
+    try {
+      await updateDraftStatus(result.id, { sent: true })
+    } catch {
+      setSent(false)
+    }
+  }
+
   /** Remembers that this one went out, so the assistant can answer "did I already send it?". */
   const handleSent = async () => {
     const next = !sent
@@ -116,6 +133,7 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
     reportAction('share')
     try {
       await navigator.share({ title: draft.subject || undefined, text: draftToText(draft) })
+      sendPrompt.begin()
     } catch {
       // dismissed by the user, or sharing isn't allowed right now
     }
@@ -127,7 +145,10 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
       target={external ? '_blank' : undefined}
       rel="noopener noreferrer"
       aria-disabled={!canSend}
-      onClick={() => reportAction(`open_${label}`)}
+      onClick={() => {
+        reportAction(`open_${label}`)
+        sendPrompt.begin()
+      }}
       className="btn btn-channel"
     >
       {icon}
@@ -265,13 +286,18 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-disabled={!canSend}
-                onClick={() => void handleCopy()}
+                onClick={() => {
+                  void handleCopy()
+                  sendPrompt.begin()
+                }}
                 className="btn btn-channel"
               >
                 <ExternalLink className="size-4" aria-hidden="true" />
                 Copy &amp; open {channel.label}
               </a>
             )}
+
+            <ReadAloudButton text={draft.body} language={draft.language} />
 
             <button type="button" onClick={() => void handleCopy()} disabled={!canSend} className="btn btn-ghost">
               {copyState === 'copied' ? <Check className="size-4" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
@@ -284,7 +310,10 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-disabled={!canSend}
-                onClick={() => reportAction('open_quote_whatsapp')}
+                onClick={() => {
+                  reportAction('open_quote_whatsapp')
+                  sendPrompt.begin()
+                }}
                 className="btn btn-ghost"
               >
                 <MessageCircle className="size-4" aria-hidden="true" />
@@ -315,6 +344,9 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
           <p className="mt-2 whitespace-pre-wrap">{transcript}</p>
         </details>
       </div>
+      {sendPrompt.asking && !sent && (
+        <SentPrompt recipient={draft.recipient} onSent={() => void confirmSent()} onNotYet={sendPrompt.close} />
+      )}
     </article>
   )
 }

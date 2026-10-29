@@ -65,7 +65,7 @@ export function splitForSpeech(text: string, max = CHUNK_CHARS, firstMax = FIRST
 }
 
 /** The most natural-sounding voice the browser has, used when the hosted voice is unavailable or the device voice is chosen. */
-function pickBrowserVoice(language = 'en'): SpeechSynthesisVoice | undefined {
+export function pickBrowserVoice(language = 'en'): SpeechSynthesisVoice | undefined {
   const voices = speechSynthesis.getVoices().filter((voice) => voice.lang.toLowerCase().startsWith(language))
   const preferred = [/natural/i, /online/i, /google/i, /samantha|ava|serena|karen/i]
   for (const pattern of preferred) {

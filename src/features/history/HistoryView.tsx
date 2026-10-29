@@ -14,7 +14,12 @@ const SECTIONS: readonly { id: Section; label: string }[] = [
 
 const NEVER = Number.MAX_SAFE_INTEGER
 
-export function HistoryView() {
+interface HistoryViewProps {
+  /** Which list to open on; the unsent reminder opens "To send". */
+  initialStatus?: StatusFilter
+}
+
+export function HistoryView({ initialStatus = 'ALL' }: HistoryViewProps) {
   const [section, setSection] = useState<Section>('drafts')
 
   return (
@@ -38,16 +43,16 @@ export function HistoryView() {
           </button>
         ))}
       </div>
-      {section === 'drafts' ? <DraftsSection /> : <ConversationsView />}
+      {section === 'drafts' ? <DraftsSection initialStatus={initialStatus} /> : <ConversationsView />}
     </section>
   )
 }
 
-function DraftsSection() {
+function DraftsSection({ initialStatus }: { initialStatus: StatusFilter }) {
   const { drafts, status: loadStatus, error, reload, remove, updateStatus } = useDrafts()
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<CategoryFilter>('ALL')
-  const [status, setStatus] = useState<StatusFilter>('ALL')
+  const [status, setStatus] = useState<StatusFilter>(initialStatus)
 
   const unsentCount = useMemo(() => drafts.filter((draft) => draft.sentAt === null).length, [drafts])
 

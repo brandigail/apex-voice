@@ -10,6 +10,7 @@ import { RecordView } from './features/record/RecordView'
 import { authClient } from './lib/auth-client'
 import { useFeatures } from './lib/useFeatures'
 import { useActivityReporting } from './lib/useActivityReporting'
+import { UnsentBanner } from './features/history/UnsentBanner'
 import { GuidedTour } from './features/tour/GuidedTour'
 import { highlight, hasSeenTour, markTourSeen } from './features/tour/highlight'
 import { TOUR_STEPS, type TourStep } from './features/tour/steps'
@@ -25,6 +26,8 @@ export default function App() {
   const userId = session?.user.id
   const [tourRequested, setTourRequested] = useState<boolean | undefined>(undefined)
   const [tourStep, setTourStep] = useState(0)
+  /** Set when the unsent reminder opens History, so it lands on the "To send" list. */
+  const [historyOnUnsent, setHistoryOnUnsent] = useState(false)
   /** Where to carry on from after a "Show me" visit to a real screen; null when no tour is waiting. */
   const [resumeAt, setResumeAt] = useState<number | null>(null)
   const tourOpen = userId !== undefined && (tourRequested ?? !hasSeenTour(userId))
@@ -55,7 +58,23 @@ export default function App() {
   }
 
   return (
-    <AppShell activeTab={tab} onTabChange={setTab} signedIn={Boolean(session)} onHelp={openTour}>
+    <AppShell
+      activeTab={tab}
+      onTabChange={(next) => {
+        setHistoryOnUnsent(false)
+        setTab(next)
+      }}
+      signedIn={Boolean(session)}
+      onHelp={openTour}
+    >
+      {session && tab === 'record' && (
+        <UnsentBanner
+          onReview={() => {
+            setHistoryOnUnsent(true)
+            setTab('history')
+          }}
+        />
+      )}
       {isPending ? (
         <p role="status" className="text-center text-slate-500 dark:text-slate-400">
           Loading…
@@ -69,7 +88,7 @@ export default function App() {
       ) : tab === 'agenda' ? (
         <AgendaView onNavigate={setTab} />
       ) : tab === 'history' ? (
-        <HistoryView />
+        <HistoryView key={String(historyOnUnsent)} initialStatus={historyOnUnsent ? 'UNSENT' : 'ALL'} />
       ) : (
         <ProfileView user={session.user} showSubscriptions={features.subscriptions} activityLogged={features.activityLogged} />
       )}

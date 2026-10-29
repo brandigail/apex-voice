@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx netlify-cli@latest deploy:*)",
+      "Bash(npx netlify-cli@latest env:set:*)"
+    ]
+  }
+}
