@@ -7,6 +7,7 @@ import { draftToText } from '../../lib/share'
 import type { Draft, DraftStatusUpdate } from '../../types/draft'
 import { languageName } from '../../types/languages'
 import { SendAtField } from './SendAtField'
+import { SendLink } from './SendLink'
 
 interface DraftListItemProps {
   draft: Draft
@@ -95,6 +96,8 @@ export function DraftListItem({ draft, onDelete, onUpdateStatus }: DraftListItem
             />
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
+            {!draft.sentAt && <SendLink draft={draft} onSent={() => void onUpdateStatus(draft.id, { sent: true })} />}
+
             <button type="button" onClick={() => void handleCopy()} className="btn btn-ghost">
               {copied ? <Check className="size-4" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
               {copied ? 'Copied' : 'Copy'}
