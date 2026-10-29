@@ -9,6 +9,7 @@ import { ProfileView } from './features/profile/ProfileView'
 import { RecordView } from './features/record/RecordView'
 import { authClient } from './lib/auth-client'
 import { useFeatures } from './lib/useFeatures'
+import { useActivityReporting } from './lib/useActivityReporting'
 import { GuidedTour } from './features/tour/GuidedTour'
 import { highlight, hasSeenTour, markTourSeen } from './features/tour/highlight'
 import { TOUR_STEPS, type TourStep } from './features/tour/steps'
@@ -18,6 +19,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>(() => (new URLSearchParams(window.location.search).has('payment') ? 'profile' : 'record'))
   const { data: session, isPending } = authClient.useSession()
   const features = useFeatures(Boolean(session))
+  useActivityReporting(Boolean(session), tab)
 
   // The tour opens by itself the first time someone signs in on this device; the "?" button opens it again.
   const userId = session?.user.id
@@ -69,7 +71,7 @@ export default function App() {
       ) : tab === 'history' ? (
         <HistoryView />
       ) : (
-        <ProfileView user={session.user} showSubscriptions={features.subscriptions} />
+        <ProfileView user={session.user} showSubscriptions={features.subscriptions} activityLogged={features.activityLogged} />
       )}
       {session && (
         <GuidedTour open={tourOpen} step={tourStep} onStep={setTourStep} onFinish={finishTour} onShow={showStep} />

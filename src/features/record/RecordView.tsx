@@ -1,5 +1,7 @@
 import { AlertCircle, RotateCcw, Sparkles } from 'lucide-react'
+import { useEffect } from 'react'
 import { ChannelIcon } from '../../components/ChannelIcon'
+import { reportActivity } from '../../lib/activity-api'
 import { channelFor } from '../../lib/channels'
 import { SpokenLanguageSelect, WriteLanguageSelect } from '../language/LanguageSelect'
 import { ChannelPicker } from './ChannelPicker'
@@ -31,6 +33,10 @@ export function RecordView() {
   const mode: RecordButtonMode = recording ? 'recording' : requesting || processing ? 'busy' : 'idle'
   const error = recorder.error?.message ?? note.error
   const stageLabel = STAGE_LABEL[note.stage]
+
+  useEffect(() => {
+    if (error) reportActivity('client_error', { screen: 'record', message: error, stage: note.stage, recorder: recorder.error?.code })
+  }, [error, note.stage, recorder.error?.code])
 
   const startNew = () => {
     note.reset()
@@ -129,7 +135,7 @@ export function RecordView() {
 
       {note.result && (
         <>
-          <DraftCard result={note.result} onChange={note.updateDraft} saveStatus={saveStatus} />
+          <DraftCard key={note.result.id} result={note.result} onChange={note.updateDraft} saveStatus={saveStatus} />
           <button type="button" onClick={startNew} className="btn btn-ghost">
             <RotateCcw className="size-4" aria-hidden="true" />
             New recording

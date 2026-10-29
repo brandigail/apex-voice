@@ -5,6 +5,7 @@ import { transcriptionPrompt } from './_lib/draft-prompt.ts'
 import { errorResponse, json } from './_lib/http.ts'
 import { claimQuota } from './_lib/rate-limit.ts'
 import { requireUser } from './_lib/session.ts'
+import { logActivity } from './_lib/activity.ts'
 import { describeError, describeUpstream } from './_lib/safe-log.ts'
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/audio/transcriptions'
@@ -75,18 +76,25 @@ export default async function handler(req: Request): Promise<Response> {
   } catch (err) {
     const timedOut = err instanceof DOMException && err.name === 'TimeoutError'
     console.error('Groq request failed:', timedOut ? 'timeout' : describeError(err))
+    await logActivity(session.user, 'transcribe_failed', { reason: timedOut ? 'timeout' : 'network', bytes: audio.size, mime: audio.type })
     return errorResponse(timedOut ? 504 : 502, 'Transcription service is unavailable. Please try again.')
   }
 
   if (!response.ok) {
-    console.error('Groq transcription error:', await describeUpstream(response))
+    const upstreamProblem = await describeUpstream(response)
+    console.error('Groq transcription error:', upstreamProblem)
+    await logActivity(session.user, 'transcribe_failed', { reason: upstreamProblem, bytes: audio.size, mime: audio.type })
     if (response.status === 429) return errorResponse(429, 'Transcription is busy. Try again in a moment.')
     return errorResponse(502, 'Transcription failed. Please try again.')
   }
 
   const { text } = (await response.json()) as GroqTranscription
   const transcript = text?.trim() ?? ''
-  if (!transcript) return errorResponse(422, 'No speech detected. Try recording again.')
+  if (!transcript) {
+    await logActivity(session.user, 'transcribe_empty', { bytes: audio.size, mime: audio.type, forAssistant })
+    return errorResponse(422, 'No speech detected. Try recording again.')
+  }
+  await logActivity(session.user, 'transcribed', { text: transcript, language, bytes: audio.size, mime: audio.type, forAssistant })
 
   return json<TranscribeResponse>({ text: transcript })
 }

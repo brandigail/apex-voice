@@ -3,8 +3,8 @@ import { z } from 'zod'
 import type { Features } from '../types/features'
 import { request } from './api'
 
-const featuresSchema = z.object({ subscriptions: z.boolean() })
-const NONE: Features = { subscriptions: false }
+const featuresSchema = z.object({ subscriptions: z.boolean(), activityLogged: z.boolean() })
+const NONE: Features = { subscriptions: false, activityLogged: false }
 
 /** Which preview features the signed-in account may see. Anything unknown or failing stays hidden. */
 export function useFeatures(signedIn: boolean): Features {

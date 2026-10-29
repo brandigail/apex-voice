@@ -5,6 +5,7 @@ import { errorResponse, json } from './_lib/http.ts'
 import { loadMemoryContext } from './_lib/memory-context.ts'
 import { claimQuota } from './_lib/rate-limit.ts'
 import { requireUser } from './_lib/session.ts'
+import { logActivity } from './_lib/activity.ts'
 
 /** Netlify's default function timeout is 10 s; the whole call, retry included, must fit inside it. */
 const DEADLINE_MS = 9_000
@@ -44,5 +45,10 @@ export default async function handler(req: Request): Promise<Response> {
     spokenLanguage,
     memory: await loadMemoryContext(session.user.id, transcript),
   })
-  return result.ok ? json<GenerateResponse>({ draft: result.draft }) : errorResponse(result.status, result.message)
+  if (!result.ok) {
+    await logActivity(session.user, 'draft_failed', { category, status: result.status, message: result.message, transcript })
+    return errorResponse(result.status, result.message)
+  }
+  await logActivity(session.user, 'draft_written', { category, writeLanguage, spokenLanguage, transcript, draft: result.draft })
+  return json<GenerateResponse>({ draft: result.draft })
 }

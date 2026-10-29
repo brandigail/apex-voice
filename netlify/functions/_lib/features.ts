@@ -1,4 +1,5 @@
 import type { Features } from '../../../src/types/features.ts'
+import { isLogged } from './activity.ts'
 
 /**
  * Which features a user may see. `FEATURE_SUBSCRIPTIONS` is "all" (released to everyone), "off", or a comma separated
@@ -11,5 +12,5 @@ function enabledFor(setting: string | undefined, email: string): boolean {
 }
 
 export function featuresFor(email: string): Features {
-  return { subscriptions: enabledFor(process.env.FEATURE_SUBSCRIPTIONS, email) }
+  return { subscriptions: enabledFor(process.env.FEATURE_SUBSCRIPTIONS, email), activityLogged: isLogged(email) }
 }

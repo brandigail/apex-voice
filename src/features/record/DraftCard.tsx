@@ -14,6 +14,7 @@ import {
 import type { GeneratedDraft } from '../../types/draft'
 import type { SaveStatus } from './useDraftAutosave'
 import { updateDraftStatus } from '../../lib/drafts-api'
+import { reportActivity } from '../../lib/activity-api'
 import { languageName } from '../../types/languages'
 import { SendAtField } from '../history/SendAtField'
 import { useEmailProvider } from './useEmailProvider'
@@ -43,6 +44,21 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
   const [sent, setSent] = useState(false)
   const [sendAt, setSendAt] = useState<string | null>(null)
   const resetTimer = useRef<number | null>(null)
+  /** The text as Apex first wrote it, so the tester's own changes show how they would have said it. */
+  const [original] = useState(() => ({ body: draft.body, subject: draft.subject }))
+
+  /** Records what the tester did with the draft, with the final wording next to the first version. */
+  const reportAction = (action: string) =>
+    reportActivity('draft_action', {
+      action,
+      category: draft.category,
+      recipient: draft.recipient,
+      subject: draft.subject,
+      body: draft.body,
+      edited: draft.body !== original.body || draft.subject !== original.subject,
+      firstBody: draft.body !== original.body ? original.body : undefined,
+      firstSubject: draft.subject !== original.subject ? original.subject : undefined,
+    })
   const [emailProvider, setEmailProvider] = useEmailProvider()
   const providerLabel = EMAIL_PROVIDERS.find((p) => p.id === emailProvider)?.label ?? 'mail'
 
@@ -61,6 +77,7 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
     draft.category === 'WHATSAPP' && draft.recipient.trim() !== '' && !isInternationalNumber(draft.recipient)
 
   const handleCopy = async () => {
+    reportAction('copy')
     try {
       await navigator.clipboard.writeText(draftToText(draft))
       setCopyState('copied')
@@ -74,6 +91,7 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
   /** Remembers that this one went out, so the assistant can answer "did I already send it?". */
   const handleSent = async () => {
     const next = !sent
+    reportAction(next ? 'mark_sent' : 'unmark_sent')
     setSent(next)
     try {
       await updateDraftStatus(result.id, { sent: next })
@@ -95,6 +113,7 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
 
   /** Opens the device share sheet, which lists every installed mail, chat and notes app. */
   const handleShare = async () => {
+    reportAction('share')
     try {
       await navigator.share({ title: draft.subject || undefined, text: draftToText(draft) })
     } catch {
@@ -108,6 +127,7 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
       target={external ? '_blank' : undefined}
       rel="noopener noreferrer"
       aria-disabled={!canSend}
+      onClick={() => reportAction(`open_${label}`)}
       className="btn btn-channel"
     >
       {icon}
@@ -264,6 +284,7 @@ export function DraftCard({ result, onChange, saveStatus }: DraftCardProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-disabled={!canSend}
+                onClick={() => reportAction('open_quote_whatsapp')}
                 className="btn btn-ghost"
               >
                 <MessageCircle className="size-4" aria-hidden="true" />

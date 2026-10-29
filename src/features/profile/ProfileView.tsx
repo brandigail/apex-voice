@@ -4,6 +4,7 @@ import { MemorySection } from '../memory/MemorySection'
 import { SubscriptionSection } from '../subscription/SubscriptionSection'
 import { FeedbackForm } from '../tour/FeedbackForm'
 import { AccountData } from './AccountData'
+import { InstallHelp, TesterNotice } from './DeviceNotices'
 import { CalendarConnect } from './CalendarConnect'
 import { authClient } from '../../lib/auth-client'
 import { PROFILE_LIMITS, type Profile, type ProfileSource } from '../../types/profile'
@@ -181,9 +182,11 @@ interface ProfileViewProps {
   user: ProfileSource & { id: string; email: string }
   /** The subscription preview is only released to some accounts. */
   showSubscriptions: boolean
+  /** True for testers whose activity is recorded; they are told so. */
+  activityLogged: boolean
 }
 
-export function ProfileView({ user, showSubscriptions }: ProfileViewProps) {
+export function ProfileView({ user, showSubscriptions, activityLogged }: ProfileViewProps) {
   return (
     <section aria-labelledby="profile-heading">
       <h1 id="profile-heading" className="text-3xl font-extrabold tracking-tight">
@@ -193,6 +196,8 @@ export function ProfileView({ user, showSubscriptions }: ProfileViewProps) {
         Drafts are written in your name and signed for you, so you never have to dictate a sign-off. Signed in as{' '}
         <span className="font-semibold">{user.email}</span>.
       </p>
+      {activityLogged && <TesterNotice />}
+      <InstallHelp />
       <ProfileForm key={user.id} initial={profileFromUser(user)} email={user.email} />
       <MemorySection />
       {showSubscriptions && <SubscriptionSection />}

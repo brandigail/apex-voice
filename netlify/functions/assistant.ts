@@ -7,6 +7,7 @@ import { errorResponse, json } from './_lib/http.ts'
 import { loadMemoryContext } from './_lib/memory-context.ts'
 import { claimQuota } from './_lib/rate-limit.ts'
 import { requireUser } from './_lib/session.ts'
+import { logActivity } from './_lib/activity.ts'
 import { rememberTurn } from './_lib/conversations.ts'
 import { safeTimeZone } from './_lib/time.ts'
 import { SPOKEN_CODES } from '../../src/types/languages.ts'
@@ -110,6 +111,12 @@ export default async function handler(req: Request): Promise<Response> {
   /** Saves the exchange to the user's history, then answers. */
   const respond = async (reply: string): Promise<Response> => {
     await rememberTurn(session.user.id, conversationId, lastUserText, reply, ctx.actions)
+    await logActivity(session.user, 'assistant_turn', {
+      said: lastUserText,
+      reply,
+      actions: ctx.actions.map((a) => a.type),
+      ms: Date.now() - startedAt,
+    })
     return json<AssistantResponse>({ reply, actions: ctx.actions, speechLanguage: ctx.speechLanguage })
   }
 
@@ -135,7 +142,10 @@ export default async function handler(req: Request): Promise<Response> {
     }
     if (!result.ok) {
       // If a tool already ran, say what was done instead of an error that hides it.
-      if (result.status === 429 && ctx.actions.length === 0) return errorResponse(429, 'The AI service is busy. Try again in a moment.')
+      if (result.status === 429 && ctx.actions.length === 0) {
+        await logActivity(session.user, 'assistant_failed', { said: lastUserText, reason: 'AI service busy (429)' })
+        return errorResponse(429, 'The AI service is busy. Try again in a moment.')
+      }
       if (result.status === 429) break
       // The model sometimes makes a malformed tool call, which Groq rejects with 400. Asking again usually works.
       if (result.status === 400) continue
@@ -158,5 +168,6 @@ export default async function handler(req: Request): Promise<Response> {
   if (ctx.actions.length > 0) {
     return respond([...new Set(ctx.actions.map((a) => a.type))].map((type) => CONFIRMATIONS[type]).join(' '))
   }
+  await logActivity(session.user, 'assistant_failed', { said: lastUserText, reason: 'timed out', ms: Date.now() - startedAt })
   return errorResponse(504, "Sorry, that took too long. Could you say it again?")
 }
