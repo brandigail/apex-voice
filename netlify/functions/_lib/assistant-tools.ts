@@ -7,6 +7,7 @@ import type { Profile } from '../../../src/types/profile.ts'
 import { buildSignature } from '../../../src/lib/profile.ts'
 import { addAgendaItem, listAgenda } from './agenda.ts'
 import { loadMemoryContext } from './memory-context.ts'
+import { LOOKUP_TOOLS, runLookupTool } from './lookup-tool.ts'
 import { MEMORY_TOOLS, runMemoryTool } from './memory-tools.ts'
 import { openText } from './crypto.ts'
 import { encryptDraftText } from './draft-store.ts'
@@ -28,6 +29,8 @@ export interface ToolContext {
   spokenLanguage?: string
   /** Set when a draft that is not in English is read out, so the client picks a matching voice. */
   speechLanguage?: string
+  /** Set by a tool whose answer is already worded for speaking; the assistant says it as it is instead of another model round. */
+  directReply?: string
 }
 
 const MAX_RANGE_DAYS = 31
@@ -146,6 +149,7 @@ export const TOOLS: ToolDefinition[] = [
       },
     },
   },
+  ...LOOKUP_TOOLS,
   ...MEMORY_TOOLS,
 ]
 
@@ -394,7 +398,7 @@ export async function runTool(name: string, rawArguments: string, ctx: ToolConte
       case 'mark_sent':
         return await markSent(args, ctx)
       default:
-        return (await runMemoryTool(name, args, ctx)) ?? fail(`There is no tool called ${name}.`)
+        return (await runLookupTool(name, args, ctx)) ?? (await runMemoryTool(name, args, ctx)) ?? fail(`There is no tool called ${name}.`)
     }
   } catch (err) {
     console.error(`Assistant tool ${name} failed:`, describeError(err))

@@ -2,7 +2,7 @@ import { neon } from '@neondatabase/serverless'
 import { errorResponse } from './http.ts'
 import { describeError } from './safe-log.ts'
 
-export type MeteredEndpoint = 'transcribe' | 'generate' | 'assistant' | 'listen' | 'speak' | 'calendar' | 'feedback' | 'export' | 'memory'
+export type MeteredEndpoint = 'transcribe' | 'generate' | 'assistant' | 'listen' | 'speak' | 'calendar' | 'feedback' | 'export' | 'memory' | 'lookup'
 
 export interface QuotaLimits {
   /** Calls one user may make in any rolling minute. */
@@ -42,6 +42,9 @@ export function limitsFor(endpoint: MeteredEndpoint): QuotaLimits {
       return { perMinute: 12, perDay: 80, globalPerDay: 500 }
     case 'export':
       return { perMinute: 2, perDay: 10, globalPerDay: 200 }
+    case 'lookup':
+      // Each search is a few seconds of Groq browsing and a large share of the free token budget.
+      return { perMinute: 3, perDay: 30, globalPerDay: 200 }
     case 'memory':
       return { perMinute: 30, perDay: 300, globalPerDay: 3000 }
     case 'feedback':
@@ -117,6 +120,7 @@ const NOUN: Record<MeteredEndpoint, string> = {
   feedback: 'feedback notes',
   export: 'data downloads',
   memory: 'memory changes',
+  lookup: 'web searches',
 }
 
 function denial(counts: UsageCounts, limits: QuotaLimits, endpoint: MeteredEndpoint): Response {

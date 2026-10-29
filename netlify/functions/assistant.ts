@@ -162,6 +162,8 @@ export default async function handler(req: Request): Promise<Response> {
     for (const call of result.toolCalls) {
       messages.push({ role: 'tool', tool_call_id: call.id, content: await runTool(call.function.name, call.function.arguments, ctx) })
     }
+    // A web search already comes back worded for speaking, and a second model round would not fit in the time limit.
+    if (ctx.directReply) return respond(ctx.directReply)
   }
 
   // Out of time or rounds. If something was already done, say so rather than losing it.
